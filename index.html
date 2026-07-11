@@ -513,7 +513,7 @@ function speak(text, onend){
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-TW';
   if(zhVoice) utter.voice = zhVoice;
-  utter.rate = 0.92;
+  utter.rate = 0.85;
   utter.onstart = ()=> speakerIcon.classList.add('speaking');
   utter.onend = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
   utter.onerror = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
