@@ -346,56 +346,52 @@
    py  = 漢語拼音（讀音以台灣／繁體中文讀音為主）
 */
 const POOL = [
-  {id:1,  zh:"杯子",   zhs:"杯子",   py:"bēi zi",        emoji:"🥤"},
-  {id:2,  zh:"碗",     zhs:"碗",     py:"wǎn",           emoji:"🥣"},
-  {id:3,  zh:"筷子",   zhs:"筷子",   py:"kuài zi",       emoji:"🥢"},
-  {id:4,  zh:"湯匙",   zhs:"汤匙",   py:"tāng chí",      emoji:"🥄"},
-  {id:5,  zh:"叉子",   zhs:"叉子",   py:"chā zi",        emoji:"🍴"},
-  {id:6,  zh:"盤子",   zhs:"盘子",   py:"pán zi",        emoji:"🍽️"},
-  {id:7,  zh:"鍋子",   zhs:"锅子",   py:"guō zi",        emoji:"🍳"},
-  {id:8,  zh:"水壺",   zhs:"水壶",   py:"shuǐ hú",       emoji:"🫖"},
-  {id:9,  zh:"牙刷",   zhs:"牙刷",   py:"yá shuā",       emoji:"🪥"},
-  {id:10, zh:"牙膏",   zhs:"牙膏",   py:"yá gāo",        emoji:"🧴"},
-  {id:11, zh:"肥皂",   zhs:"肥皂",   py:"féi zào",       emoji:"🧼"},
-  {id:12, zh:"梳子",   zhs:"梳子",   py:"shū zi",        emoji:"🪮"},
-  {id:13, zh:"鏡子",   zhs:"镜子",   py:"jìng zi",       emoji:"🪞"},
-  {id:14, zh:"眼鏡",   zhs:"眼镜",   py:"yǎn jìng",      emoji:"👓"},
-  {id:15, zh:"手錶",   zhs:"手表",   py:"shǒu biǎo",     emoji:"⌚"},
-  {id:16, zh:"手機",   zhs:"手机",   py:"shǒu jī",       emoji:"📱"},
-  {id:17, zh:"電腦",   zhs:"电脑",   py:"diàn nǎo",      emoji:"💻"},
-  {id:18, zh:"電視",   zhs:"电视",   py:"diàn shì",      emoji:"📺"},
-  {id:19, zh:"相機",   zhs:"相机",   py:"xiàng jī",      emoji:"📷"},
-  {id:20, zh:"燈泡",   zhs:"灯泡",   py:"dēng pào",      emoji:"💡"},
-  {id:21, zh:"時鐘",   zhs:"时钟",   py:"shí zhōng",     emoji:"🕰️"},
-  {id:22, zh:"雨傘",   zhs:"雨伞",   py:"yǔ sǎn",        emoji:"☂️"},
-  {id:23, zh:"鑰匙",   zhs:"钥匙",   py:"yào shi",       emoji:"🔑"},
-  {id:24, zh:"錢包",   zhs:"钱包",   py:"qián bāo",      emoji:"👛"},
-  {id:25, zh:"背包",   zhs:"背包",   py:"bēi bāo",       emoji:"🎒"},
-  {id:26, zh:"帽子",   zhs:"帽子",   py:"mào zi",        emoji:"🧢"},
-  {id:27, zh:"鞋子",   zhs:"鞋子",   py:"xié zi",        emoji:"👟"},
-  {id:28, zh:"襪子",   zhs:"袜子",   py:"wà zi",         emoji:"🧦"},
-  {id:29, zh:"衣服",   zhs:"衣服",   py:"yī fú",         emoji:"👕"},
-  {id:30, zh:"褲子",   zhs:"裤子",   py:"kù zi",         emoji:"👖"},
-  {id:31, zh:"剪刀",   zhs:"剪刀",   py:"jiǎn dāo",      emoji:"✂️"},
-  {id:32, zh:"尺",     zhs:"尺",     py:"chǐ",           emoji:"📏"},
-  {id:33, zh:"鉛筆",   zhs:"铅笔",   py:"qiān bǐ",       emoji:"✏️"},
-  {id:34, zh:"原子筆", zhs:"原子笔", py:"yuán zǐ bǐ",    emoji:"🖊️"},
-  {id:35, zh:"橡皮擦", zhs:"橡皮擦", py:"xiàng pí cā",   emoji:"🧽"},
-  {id:36, zh:"筆記本", zhs:"笔记本", py:"bǐ jì běn",     emoji:"📓"},
-  {id:37, zh:"書",     zhs:"书",     py:"shū",           emoji:"📖"},
-  {id:38, zh:"信封",   zhs:"信封",   py:"xìn fēng",      emoji:"✉️"},
-  {id:39, zh:"郵票",   zhs:"邮票",   py:"yóu piào",      emoji:"📮"},
-  {id:40, zh:"手電筒", zhs:"手电筒", py:"shǒu diàn tǒng",emoji:"🔦"},
-  {id:41, zh:"電池",   zhs:"电池",   py:"diàn chí",      emoji:"🔋"},
-  {id:42, zh:"插頭",   zhs:"插头",   py:"chā tóu",       emoji:"🔌"},
-  {id:43, zh:"掃把",   zhs:"扫把",   py:"sǎo bǎ",        emoji:"🧹"},
-  {id:44, zh:"水桶",   zhs:"水桶",   py:"shuǐ tǒng",     emoji:"🪣"},
-  {id:45, zh:"垃圾桶", zhs:"垃圾桶", py:"lè sè tǒng",    emoji:"🗑️"},
-  {id:46, zh:"花瓶",   zhs:"花瓶",   py:"huā píng",      emoji:"🏺"},
-  {id:47, zh:"蠟燭",   zhs:"蜡烛",   py:"là zhú",        emoji:"🕯️"},
-  {id:48, zh:"氣球",   zhs:"气球",   py:"qì qiú",        emoji:"🎈"},
-  {id:49, zh:"禮物",   zhs:"礼物",   py:"lǐ wù",         emoji:"🎁"},
-  {id:50, zh:"球",     zhs:"球",     py:"qiú",           emoji:"⚽"}
+{id:1,  zh:"長尾夾",    zhs:"长尾夹",    py:"cháng wěi jiā",    img:"image/圖片1.png"},
+{id:2,  zh:"盆栽",      zhs:"盆栽",      py:"pén zāi",          img:"image/圖片2.png"},
+{id:3,  zh:"衣架",      zhs:"衣架",      py:"yī jià",          img:"image/圖片3.png"},
+{id:4,  zh:"布鞋",      zhs:"布鞋",      py:"bù xié",          img:"image/圖片4.png"},
+{id:5,  zh:"高跟鞋",    zhs:"高跟鞋",    py:"gāo gēn xié",      img:"image/圖片5.png"},
+{id:6,  zh:"掃把",      zhs:"扫把",      py:"sào bǎ",          img:"image/圖片6.png"},
+{id:7,  zh:"拖把",      zhs:"拖把",      py:"tuō bǎ",          img:"image/圖片7.png"},
+{id:8,  zh:"電腦",      zhs:"电脑",      py:"diàn nǎo",        img:"image/圖片8.png"},
+{id:9,  zh:"相機",      zhs:"相机",      py:"xiàng jī",        img:"image/圖片9.png"},
+{id:10, zh:"手電筒",    zhs:"手电筒",    py:"shǒu diàn tǒng",  img:"image/圖片10.png"},
+{id:11, zh:"錢包",      zhs:"钱包",      py:"qián bāo",        img:"image/圖片11.png"},
+{id:12, zh:"行動電源",  zhs:"行动电源",  py:"xíng dòng diàn yuán", img:"image/圖片12.png"},
+{id:13, zh:"衣服",      zhs:"衣服",      py:"yī fu",           img:"image/圖片13.png"},
+{id:14, zh:"褲子",      zhs:"裤子",      py:"kù zi",           img:"image/圖片14.png"},
+{id:15, zh:"手錶",      zhs:"手表",      py:"shǒu biǎo",       img:"image/圖片15.png"},
+{id:16, zh:"耳環",      zhs:"耳环",      py:"ěr huán",         img:"image/圖片16.png"},
+{id:17, zh:"筆記本",    zhs:"笔记本",    py:"bǐ jì běn",       img:"image/圖片17.png"},
+{id:18, zh:"蠟燭",      zhs:"蜡烛",      py:"là zhú",          img:"image/圖片18.png"},
+{id:19, zh:"雨傘",      zhs:"雨伞",      py:"yǔ sǎn",          img:"image/圖片19.png"},
+{id:20, zh:"背包",      zhs:"背包",      py:"bēi bāo",         img:"image/圖片20.png"},
+{id:21, zh:"遙控器",    zhs:"遥控器",    py:"yáo kòng qì",     img:"image/圖片21.png"},
+{id:22, zh:"杯子",      zhs:"杯子",      py:"bēi zi",          img:"image/圖片22.png"},
+{id:23, zh:"牙刷",      zhs:"牙刷",      py:"yá shuā",         img:"image/圖片23.png"},
+{id:24, zh:"牙膏",      zhs:"牙膏",      py:"yá gāo",          img:"image/圖片24.png"},
+{id:25, zh:"筷子",      zhs:"筷子",      py:"kuài zi",         img:"image/圖片25.png"},
+{id:26, zh:"刀子",      zhs:"刀子",      py:"dāo zi",          img:"image/圖片26.png"},
+{id:27, zh:"毛巾",      zhs:"毛巾",      py:"máo jīn",         img:"image/圖片27.png"},
+{id:28, zh:"梳子",      zhs:"梳子",      py:"shū zi",          img:"image/圖片28.png"},
+{id:29, zh:"盤子",      zhs:"盘子",      py:"pán zi",          img:"image/圖片29.png"},
+{id:30, zh:"吹風機",    zhs:"吹风机",    py:"chuī fēng jī",    img:"image/圖片30.png"},
+{id:31, zh:"塑膠瓶",    zhs:"塑料瓶",    py:"sù liào píng",    img:"image/圖片31.png"},
+{id:32, zh:"叉子",      zhs:"叉子",      py:"chā zi",          img:"image/圖片32.png"},
+{id:33, zh:"水瓶",      zhs:"水瓶",      py:"shuǐ píng",       img:"image/圖片33.png"},
+{id:34, zh:"桶子",      zhs:"桶子",      py:"tǒng zi",         img:"image/圖片34.png"},
+{id:35, zh:"鍋子",      zhs:"锅子",      py:"guō zi",          img:"image/圖片35.png"},
+{id:36, zh:"湯匙",      zhs:"汤匙",      py:"tāng chí",        img:"image/圖片36.png"},
+{id:37, zh:"鋁罐",      zhs:"铝罐",      py:"lǚ guàn",         img:"image/圖片37.png"},
+{id:38, zh:"衛生紙",    zhs:"卫生纸",    py:"wèi shēng zhǐ",   img:"image/圖片38.png"},
+{id:39, zh:"釘書機",    zhs:"订书机",    py:"dìng shū jī",     img:"image/圖片39.png"},
+{id:40, zh:"電池",      zhs:"电池",      py:"diàn chí",        img:"image/圖片40.png"},
+{id:41, zh:"原子筆",    zhs:"原子笔",    py:"yuán zǐ bǐ",      img:"image/圖片41.png"},
+{id:42, zh:"鉛筆",      zhs:"铅笔",      py:"qiān bǐ",         img:"image/圖片42.png"},
+{id:43, zh:"橡皮擦",    zhs:"橡皮擦",    py:"xiàng pí cā",     img:"image/圖片43.png"},
+{id:44, zh:"眼鏡",      zhs:"眼镜",      py:"yǎn jìng",        img:"image/圖片44.png"},
+{id:45, zh:"鏡子",      zhs:"镜子",      py:"jìng zi",         img:"image/圖片45.png"},
+{id:46, zh:"鑰匙",      zhs:"钥匙",      py:"yào shi",         img:"image/圖片46.png"}
 ];
 
 /* ============ 座標與方位詞（含簡體+拼音） ============ */
@@ -533,7 +529,10 @@ function renderShelf(){
     cell.dataset.cell = i;
     if(state.filled[i]){
       cell.classList.add('filled');
-      cell.textContent = state.answerKey[i].emoji;
+      const img = document.createElement('img');
+      img.src = state.answerKey[i].img;
+      img.style.width = "80%";
+      cell.appendChild(img);
     }
     shelfGrid.appendChild(cell);
   }
@@ -545,7 +544,13 @@ function renderTray(){
     const tile = document.createElement('div');
     tile.className = 'item-tile';
     tile.dataset.itemId = item.id;
-    tile.textContent = item.emoji;
+    
+    // 改成建立圖片
+    const img = document.createElement('img');
+    img.src = item.img;
+    img.style.width = "80%"; // 設定圖片大小
+    tile.appendChild(img);
+
     tile.setAttribute('aria-label', item.zh);
     if(state.filled_item_ids && state.filled_item_ids.has(item.id)){
       tile.classList.add('placeholder');
