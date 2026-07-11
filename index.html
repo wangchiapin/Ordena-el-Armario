@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Ordena el Armario | Cada Día Un Minuto</title>
+<style>
+  :root{
+    --ink:#231F1A;
+    --paper:#F0E6D2;
+    --paper-deep:#E4D6B8;
+    --brick:#AD3B2D;
+    --brick-deep:#8C2F26;
+    --gold:#C9A227;
+    --jade:#4C7A5E;
+    --jade-deep:#3A5E48;
+    --wood:#7A5233;
+    --wood-deep:#5C3D24;
+    --shadow: 0 6px 18px rgba(35,31,26,0.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:
+      radial-gradient(circle at 10% 10%, rgba(201,162,39,0.08), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(173,59,45,0.08), transparent 40%),
+      var(--paper);
+    font-family:"PingFang TC","Microsoft JhengHei","Heiti TC","Noto Sans TC",sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .brand{
+    display:flex;align-items:center;gap:10px;margin:6px 0 14px;
+  }
+  .seal{
+    width:40px;height:40px;border-radius:6px;background:var(--brick);
+    color:var(--paper);display:flex;align-items:center;justify-content:center;
+    font-size:22px;font-weight:700;box-shadow:var(--shadow);
+    font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;
+    border:2px solid var(--brick-deep);
+    transform:rotate(-2deg);
+  }
+  .brand h1{
+    font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;
+    font-size:21px;margin:0;letter-spacing:1px;
+  }
+  .brand p{margin:0;font-size:12px;color:#6b6155;letter-spacing:0.5px;}
+
+  .stage{
+    width:100%;max-width:980px;
+    display:grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap:18px;
+    align-items:stretch;
+  }
+  @media (max-width: 760px){
+    .stage{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:#fff8ea;
+    border:1px solid var(--paper-deep);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- 左側：指令欄（狀態/指令/操作/拖曳物品/小抄） ---------- */
+  .status-row{display:flex;gap:10px;margin-bottom:10px;}
+  .status-chip{
+    flex:1;
+    background:var(--paper);
+    border:1px solid var(--paper-deep);
+    border-radius:10px;
+    padding:6px 10px;
+    text-align:center;
+  }
+  .status-chip .num{
+    font-family:"Noto Serif TC","Songti TC",serif;
+    font-size:20px;font-weight:700;
+  }
+  .status-chip.timer .num{color:var(--jade-deep);}
+  .status-chip.err .num{color:var(--brick-deep);}
+  .status-chip .lbl{font-size:10.5px;color:#6b6155;letter-spacing:0.5px;}
+
+  .instruction-card{
+    background:linear-gradient(180deg,#fff,var(--paper));
+    border:1px solid var(--paper-deep);
+    border-radius:12px;
+    padding:12px;
+    min-height:78px;
+    display:flex;flex-direction:column;justify-content:center;
+    gap:6px;
+    position:relative;
+    overflow:hidden;
+  }
+  .instruction-card::before{
+    content:"";
+    position:absolute;top:-30px;right:-30px;width:90px;height:90px;
+    background:radial-gradient(circle, rgba(201,162,39,0.18), transparent 70%);
+  }
+  .speaker{
+    width:30px;height:30px;border-radius:50%;
+    background:var(--jade);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;flex-shrink:0;
+  }
+  .speaker.speaking{animation:pulse 0.9s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(76,122,94,0.5);}
+    70%{box-shadow:0 0 0 12px rgba(76,122,94,0);}
+    100%{box-shadow:0 0 0 0 rgba(76,122,94,0);}
+  }
+  .instruction-top{display:flex;align-items:center;gap:10px;}
+  .instruction-text{
+    font-size:14px;line-height:1.4;color:var(--ink);
+    min-height:20px;
+  }
+  .instruction-text .cn-line{font-size:15px;font-weight:600;}
+  .instruction-text .py-line{font-size:12px;color:#6b6155;font-style:italic;margin-top:2px;}
+  .feedback{
+    font-size:12.5px;font-weight:700;min-height:16px;
+  }
+  .feedback.err{color:var(--brick-deep);}
+  .feedback.ok{color:var(--jade-deep);}
+
+  .controls-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  button{
+    font-family:inherit;
+    border:none;border-radius:8px;
+    padding:8px 13px;font-size:12.5px;font-weight:700;
+    cursor:pointer;
+    transition:transform .1s, opacity .15s;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-primary{background:var(--brick);color:#fff;}
+  .btn-secondary{background:var(--paper-deep);color:var(--ink);}
+  .btn-primary:disabled,.btn-secondary:disabled{opacity:0.45;cursor:not-allowed;}
+  .toggle-row{
+    display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;color:#6b6155;
+  }
+
+  .tray-section{margin-top:12px;}
+  .tray-label{
+    font-size:11.5px;color:#6b6155;margin:2px 2px 6px;letter-spacing:0.5px;
+  }
+  .tray{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    padding:8px;
+    background:var(--paper-deep);
+    border-radius:12px;
+    min-height:90px;
+  }
+  .item-tile{
+    aspect-ratio:1/1;
+    background:#fffdf6;
+    border:2px solid #d8c9a3;
+    border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+    box-shadow:0 2px 4px rgba(0,0,0,0.12);
+    transition: box-shadow .15s, transform .15s, opacity .2s;
+  }
+  .item-tile:active{cursor:grabbing;}
+  .item-tile.dragging{
+    position:fixed;
+    z-index:999;
+    box-shadow:0 10px 24px rgba(0,0,0,0.35);
+    transform:scale(1.12);
+  }
+  .item-tile.placeholder{
+    opacity:0; pointer-events:none;
+  }
+
+  .legend{
+    margin-top:12px;
+    background:var(--paper);
+    border:1px solid var(--paper-deep);
+    border-radius:10px;
+    padding:8px 10px;
+  }
+  .legend h3{
+    margin:0 0 6px;font-size:11px;letter-spacing:0.5px;color:#6b6155;font-weight:700;
+  }
+  .legend-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
+    text-align:center;font-size:11px;
+  }
+  .legend-grid .cell{
+    display:block;background:#fffdf6;border:1px solid #e4d6b8;border-radius:6px;padding:4px 2px;
+    line-height:1.25;
+  }
+  .legend-grid .cell .py{display:block;font-size:9.5px;color:#8a7f6f;font-style:italic;}
+
+  /* ---------- 右側：櫃子 ---------- */
+  .cabinet-wrap{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:stretch;
+  }
+  .cabinet{
+    background:linear-gradient(180deg,var(--wood),var(--wood-deep));
+    border-radius:12px;
+    padding:14px;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.15), var(--shadow);
+  }
+  .shelf-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:8px;
+    aspect-ratio:1/1;
+  }
+  .shelf-cell{
+    background:rgba(240,230,210,0.12);
+    border:2px dashed rgba(240,230,210,0.35);
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:38px;
+    position:relative;
+    transition:background .15s, border-color .15s, transform .15s;
+  }
+  .shelf-cell.hover-ok{background:rgba(76,122,94,0.35);border-color:var(--jade);}
+  .shelf-cell.filled{
+    background:var(--paper);
+    border:2px solid var(--gold);
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.06);
+  }
+  .shelf-cell.shake{animation:shake .35s;}
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-6px);}
+    40%{transform:translateX(6px);}
+    60%{transform:translateX(-4px);}
+    80%{transform:translateX(4px);}
+  }
+
+  .end-overlay{
+    position:absolute;inset:0;background:rgba(35,31,26,0.55);
+    display:none;align-items:center;justify-content:center;border-radius:14px;
+    z-index:10;
+  }
+  .end-overlay.show{display:flex;}
+  .end-card{
+    background:var(--paper);border-radius:14px;padding:24px;text-align:center;
+    max-width:280px;box-shadow:var(--shadow);border:2px solid var(--gold);
+  }
+  .end-card h2{margin:0 0 8px;font-family:"Noto Serif TC","Songti TC",serif;color:var(--brick-deep);}
+  .end-card .stat{font-size:14px;margin:6px 0;}
+  .end-card .stat b{font-size:20px;color:var(--jade-deep);}
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <div class="seal">收</div>
+  <div>
+    <h1>Ordena el Armario</h1>
+    <p>Cada Día Un Minuto · práctica auditiva de posiciones en chino</p>
+  </div>
+</div>
+
+<div class="stage">
+
+  <!-- 左側：指令欄 -->
+  <div class="panel">
+    <div class="status-row">
+      <div class="status-chip timer">
+        <div class="num" id="timerNum">00:00</div>
+        <div class="lbl">Tiempo</div>
+      </div>
+      <div class="status-chip err">
+        <div class="num" id="errNum">0</div>
+        <div class="lbl">Errores</div>
+      </div>
+    </div>
+
+    <div class="instruction-card">
+      <div class="instruction-top">
+        <div class="speaker" id="speakerIcon">🔊</div>
+        <div style="flex:1;">
+          <div class="instruction-text" id="instructionText">Pulsa «Empezar» y sigue las instrucciones de voz para ordenar el armario.</div>
+        </div>
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+
+    <div class="controls-row">
+      <button class="btn-primary" id="startBtn">Empezar</button>
+      <button class="btn-secondary" id="replayBtn" disabled>🔁 Escuchar de nuevo</button>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="textToggle">
+      <label for="textToggle">Mostrar texto de la instrucción (ayuda para principiantes)</label>
+    </div>
+
+    <div class="tray-section">
+      <div class="tray-label">Arrastra estos objetos a la estantería</div>
+      <div class="tray" id="tray"></div>
+    </div>
+
+    <div class="legend">
+      <h3>Vocabulario de posiciones</h3>
+      <div class="legend-grid" id="legendGrid"></div>
+    </div>
+  </div>
+
+  <!-- 右側：櫃子 -->
+  <div class="panel cabinet-wrap" id="cabinetWrap">
+    <div class="cabinet">
+      <div class="shelf-grid" id="shelfGrid"></div>
+    </div>
+
+    <div class="end-overlay" id="endOverlay">
+      <div class="end-card">
+        <h2>¡Completado!</h2>
+        <div class="stat">Tiempo empleado: <b id="finalTime">00:00</b></div>
+        <div class="stat">Errores: <b id="finalErrors">0</b></div>
+        <button class="btn-primary" id="restartBtn" style="margin-top:12px;">Jugar de nuevo</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+
+/* ============ 50 樣常見生活物品資料庫 ============
+   zh  = 繁體中文（用於語音朗讀，台灣讀音）
+   zhs = 簡體中文（顯示用）
+   py  = 漢語拼音（讀音以台灣／繁體中文讀音為主）
+*/
+const POOL = [
+  {id:1,  zh:"杯子",   zhs:"杯子",   py:"bēi zi",        emoji:"🥤"},
+  {id:2,  zh:"碗",     zhs:"碗",     py:"wǎn",           emoji:"🥣"},
+  {id:3,  zh:"筷子",   zhs:"筷子",   py:"kuài zi",       emoji:"🥢"},
+  {id:4,  zh:"湯匙",   zhs:"汤匙",   py:"tāng chí",      emoji:"🥄"},
+  {id:5,  zh:"叉子",   zhs:"叉子",   py:"chā zi",        emoji:"🍴"},
+  {id:6,  zh:"盤子",   zhs:"盘子",   py:"pán zi",        emoji:"🍽️"},
+  {id:7,  zh:"鍋子",   zhs:"锅子",   py:"guō zi",        emoji:"🍳"},
+  {id:8,  zh:"水壺",   zhs:"水壶",   py:"shuǐ hú",       emoji:"🫖"},
+  {id:9,  zh:"牙刷",   zhs:"牙刷",   py:"yá shuā",       emoji:"🪥"},
+  {id:10, zh:"牙膏",   zhs:"牙膏",   py:"yá gāo",        emoji:"🧴"},
+  {id:11, zh:"肥皂",   zhs:"肥皂",   py:"féi zào",       emoji:"🧼"},
+  {id:12, zh:"梳子",   zhs:"梳子",   py:"shū zi",        emoji:"🪮"},
+  {id:13, zh:"鏡子",   zhs:"镜子",   py:"jìng zi",       emoji:"🪞"},
+  {id:14, zh:"眼鏡",   zhs:"眼镜",   py:"yǎn jìng",      emoji:"👓"},
+  {id:15, zh:"手錶",   zhs:"手表",   py:"shǒu biǎo",     emoji:"⌚"},
+  {id:16, zh:"手機",   zhs:"手机",   py:"shǒu jī",       emoji:"📱"},
+  {id:17, zh:"電腦",   zhs:"电脑",   py:"diàn nǎo",      emoji:"💻"},
+  {id:18, zh:"電視",   zhs:"电视",   py:"diàn shì",      emoji:"📺"},
+  {id:19, zh:"相機",   zhs:"相机",   py:"xiàng jī",      emoji:"📷"},
+  {id:20, zh:"燈泡",   zhs:"灯泡",   py:"dēng pào",      emoji:"💡"},
+  {id:21, zh:"時鐘",   zhs:"时钟",   py:"shí zhōng",     emoji:"🕰️"},
+  {id:22, zh:"雨傘",   zhs:"雨伞",   py:"yǔ sǎn",        emoji:"☂️"},
+  {id:23, zh:"鑰匙",   zhs:"钥匙",   py:"yào shi",       emoji:"🔑"},
+  {id:24, zh:"錢包",   zhs:"钱包",   py:"qián bāo",      emoji:"👛"},
+  {id:25, zh:"背包",   zhs:"背包",   py:"bēi bāo",       emoji:"🎒"},
+  {id:26, zh:"帽子",   zhs:"帽子",   py:"mào zi",        emoji:"🧢"},
+  {id:27, zh:"鞋子",   zhs:"鞋子",   py:"xié zi",        emoji:"👟"},
+  {id:28, zh:"襪子",   zhs:"袜子",   py:"wà zi",         emoji:"🧦"},
+  {id:29, zh:"衣服",   zhs:"衣服",   py:"yī fú",         emoji:"👕"},
+  {id:30, zh:"褲子",   zhs:"裤子",   py:"kù zi",         emoji:"👖"},
+  {id:31, zh:"剪刀",   zhs:"剪刀",   py:"jiǎn dāo",      emoji:"✂️"},
+  {id:32, zh:"尺",     zhs:"尺",     py:"chǐ",           emoji:"📏"},
+  {id:33, zh:"鉛筆",   zhs:"铅笔",   py:"qiān bǐ",       emoji:"✏️"},
+  {id:34, zh:"原子筆", zhs:"原子笔", py:"yuán zǐ bǐ",    emoji:"🖊️"},
+  {id:35, zh:"橡皮擦", zhs:"橡皮擦", py:"xiàng pí cā",   emoji:"🧽"},
+  {id:36, zh:"筆記本", zhs:"笔记本", py:"bǐ jì běn",     emoji:"📓"},
+  {id:37, zh:"書",     zhs:"书",     py:"shū",           emoji:"📖"},
+  {id:38, zh:"信封",   zhs:"信封",   py:"xìn fēng",      emoji:"✉️"},
+  {id:39, zh:"郵票",   zhs:"邮票",   py:"yóu piào",      emoji:"📮"},
+  {id:40, zh:"手電筒", zhs:"手电筒", py:"shǒu diàn tǒng",emoji:"🔦"},
+  {id:41, zh:"電池",   zhs:"电池",   py:"diàn chí",      emoji:"🔋"},
+  {id:42, zh:"插頭",   zhs:"插头",   py:"chā tóu",       emoji:"🔌"},
+  {id:43, zh:"掃把",   zhs:"扫把",   py:"sǎo bǎ",        emoji:"🧹"},
+  {id:44, zh:"水桶",   zhs:"水桶",   py:"shuǐ tǒng",     emoji:"🪣"},
+  {id:45, zh:"垃圾桶", zhs:"垃圾桶", py:"lè sè tǒng",    emoji:"🗑️"},
+  {id:46, zh:"花瓶",   zhs:"花瓶",   py:"huā píng",      emoji:"🏺"},
+  {id:47, zh:"蠟燭",   zhs:"蜡烛",   py:"là zhú",        emoji:"🕯️"},
+  {id:48, zh:"氣球",   zhs:"气球",   py:"qì qiú",        emoji:"🎈"},
+  {id:49, zh:"禮物",   zhs:"礼物",   py:"lǐ wù",         emoji:"🎁"},
+  {id:50, zh:"球",     zhs:"球",     py:"qiú",           emoji:"⚽"}
+];
+
+/* ============ 座標與方位詞（含簡體+拼音） ============ */
+// row-major：0=左上角 1=正上方 2=右上角 3=左邊 4=正中間 5=右邊 6=左下角 7=正下方 8=右下角
+const ABS_LABEL = [
+  {t:"左上角", s:"左上角", py:"zuǒ shàng jiǎo"},
+  {t:"正上方", s:"正上方", py:"zhèng shàng fāng"},
+  {t:"右上角", s:"右上角", py:"yòu shàng jiǎo"},
+  {t:"左邊",   s:"左边",   py:"zuǒ biān"},
+  {t:"正中間", s:"正中间", py:"zhèng zhōng jiān"},
+  {t:"右邊",   s:"右边",   py:"yòu biān"},
+  {t:"左下角", s:"左下角", py:"zuǒ xià jiǎo"},
+  {t:"正下方", s:"正下方", py:"zhèng xià fāng"},
+  {t:"右下角", s:"右下角", py:"yòu xià jiǎo"}
+];
+const REL_DIR = {
+  "上面": {t:"上面", s:"上面", py:"shàng miàn"},
+  "下面": {t:"下面", s:"下面", py:"xià miàn"},
+  "左邊": {t:"左邊", s:"左边", py:"zuǒ biān"},
+  "右邊": {t:"右邊", s:"右边", py:"yòu biān"}
+};
+const CONN = {
+  ba:     {t:"把",   s:"把",   py:"bǎ"},
+  fangdao:{t:"放到", s:"放到", py:"fàng dào"},
+  fangzai:{t:"放在", s:"放在", py:"fàng zài"},
+  de:     {t:"的",   s:"的",   py:"de"},
+  guizi:  {t:"櫃子",  s:"柜子", py:"guì zi"}
+};
+
+function rc(i){ return {row: Math.floor(i/3), col: i%3}; }
+// 從 fromCell 看向 toCell 的相對方位（僅上下左右，需正交相鄰）
+function relDirection(fromI, toI){
+  const a = rc(fromI), b = rc(toI);
+  if(b.row===a.row-1 && b.col===a.col) return "上面";
+  if(b.row===a.row+1 && b.col===a.col) return "下面";
+  if(b.col===a.col-1 && b.row===a.row) return "左邊";
+  if(b.col===a.col+1 && b.row===a.row) return "右邊";
+  return null;
+}
+
+/* ============ 狀態 ============ */
+let state = null;
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function newGame(){
+  const chosenItems = shuffle(POOL).slice(0,9);           // 隨機取 9 樣物品
+  const cellOrder = shuffle([0,1,2,3,4,5,6,7,8]);          // 物品對應到哪個格子（隨機配對）
+  const answerKey = {};                                    // cellIndex -> item
+  chosenItems.forEach((item,i)=>{ answerKey[cellOrder[i]] = item; });
+  const instructionOrder = shuffle([0,1,2,3,4,5,6,7,8]);   // 出題（填格）順序
+
+  state = {
+    answerKey,
+    instructionOrder,
+    step: 0,
+    filled: {},          // cellIndex -> true
+    errors: 0,
+    startTime: null,
+    timerInterval: null,
+    currentTargetCell: null,
+    currentTargetItem: null,
+    finished: false,
+    trayItems: shuffle(chosenItems),
+  };
+  return state;
+}
+
+/* ============ DOM 參照 ============ */
+const shelfGrid = document.getElementById('shelfGrid');
+const tray = document.getElementById('tray');
+const instructionText = document.getElementById('instructionText');
+const feedbackEl = document.getElementById('feedback');
+const speakerIcon = document.getElementById('speakerIcon');
+const timerNum = document.getElementById('timerNum');
+const errNum = document.getElementById('errNum');
+const startBtn = document.getElementById('startBtn');
+const replayBtn = document.getElementById('replayBtn');
+const textToggle = document.getElementById('textToggle');
+const endOverlay = document.getElementById('endOverlay');
+const finalTime = document.getElementById('finalTime');
+const finalErrors = document.getElementById('finalErrors');
+const restartBtn = document.getElementById('restartBtn');
+const legendGrid = document.getElementById('legendGrid');
+
+/* ============ 方位詞小抄（簡體+拼音） ============ */
+(function renderLegend(){
+  legendGrid.innerHTML = '';
+  ABS_LABEL.forEach(l=>{
+    const cell = document.createElement('span');
+    cell.className = 'cell';
+    cell.innerHTML = `${l.s}<span class="py">${l.py}</span>`;
+    legendGrid.appendChild(cell);
+  });
+})();
+
+/* ============ 語音 ============ */
+let zhVoice = null;
+function pickVoice(){
+  const voices = speechSynthesis.getVoices();
+  zhVoice = voices.find(v=>v.lang==='zh-TW') ||
+            voices.find(v=>v.lang && v.lang.toLowerCase().startsWith('zh')) ||
+            null;
+}
+if('speechSynthesis' in window){
+  speechSynthesis.onvoiceschanged = pickVoice;
+  pickVoice();
+}
+function speak(text, onend){
+  if(!('speechSynthesis' in window)){ if(onend) onend(); return; }
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-TW';
+  if(zhVoice) utter.voice = zhVoice;
+  utter.rate = 0.92;
+  utter.onstart = ()=> speakerIcon.classList.add('speaking');
+  utter.onend = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
+  utter.onerror = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
+  speechSynthesis.speak(utter);
+}
+
+/* ============ 畫面渲染 ============ */
+function renderShelf(){
+  shelfGrid.innerHTML = '';
+  for(let i=0;i<9;i++){
+    const cell = document.createElement('div');
+    cell.className = 'shelf-cell';
+    cell.dataset.cell = i;
+    if(state.filled[i]){
+      cell.classList.add('filled');
+      cell.textContent = state.answerKey[i].emoji;
+    }
+    shelfGrid.appendChild(cell);
+  }
+}
+
+function renderTray(){
+  tray.innerHTML = '';
+  state.trayItems.forEach(item=>{
+    const tile = document.createElement('div');
+    tile.className = 'item-tile';
+    tile.dataset.itemId = item.id;
+    tile.textContent = item.emoji;
+    tile.setAttribute('aria-label', item.zh);
+    if(state.filled_item_ids && state.filled_item_ids.has(item.id)){
+      tile.classList.add('placeholder');
+    }
+    attachDrag(tile);
+    tray.appendChild(tile);
+  });
+}
+
+function updateErrDisplay(){ errNum.textContent = state.errors; }
+
+function startTimer(){
+  state.startTime = Date.now();
+  state.timerInterval = setInterval(()=>{
+    const elapsed = Math.floor((Date.now()-state.startTime)/1000);
+    const m = String(Math.floor(elapsed/60)).padStart(2,'0');
+    const s = String(elapsed%60).padStart(2,'0');
+    timerNum.textContent = `${m}:${s}`;
+  }, 250);
+}
+function stopTimer(){
+  clearInterval(state.timerInterval);
+}
+function elapsedString(){
+  const elapsed = Math.floor((Date.now()-state.startTime)/1000);
+  const m = String(Math.floor(elapsed/60)).padStart(2,'0');
+  const s = String(elapsed%60).padStart(2,'0');
+  return `${m}:${s}`;
+}
+
+/* ============ 出題邏輯 ============ */
+// 回傳 {trad, simp, py} 三種版本：trad 供語音朗讀；simp/py 供「顯示指令文字」使用
+function buildInstruction(cellI){
+  const item = state.answerKey[cellI];
+  state.currentTargetCell = cellI;
+  state.currentTargetItem = item;
+
+  // 找出「已完成、且與目標格正交相鄰」的鄰居格
+  const neighborCandidates = [];
+  Object.keys(state.filled).forEach(fi=>{
+    fi = Number(fi);
+    const dir = relDirection(fi, cellI);
+    if(dir) neighborCandidates.push({cell:fi, dir});
+  });
+
+  let trad, simp, py;
+  if(neighborCandidates.length > 0 && Math.random() < 0.6){
+    const pick = neighborCandidates[Math.floor(Math.random()*neighborCandidates.length)];
+    const neighborItem = state.answerKey[pick.cell];
+    const dirMeta = REL_DIR[pick.dir];
+    trad = `${CONN.ba.t}${item.zh}${CONN.fangzai.t}${neighborItem.zh}${CONN.de.t}${dirMeta.t}。`;
+    simp = `${CONN.ba.s}${item.zhs}${CONN.fangzai.s}${neighborItem.zhs}${CONN.de.s}${dirMeta.s}。`;
+    py   = `${CONN.ba.py} ${item.py} ${CONN.fangzai.py} ${neighborItem.py} ${CONN.de.py} ${dirMeta.py}。`;
+  } else {
+    const label = ABS_LABEL[cellI];
+    trad = `${CONN.ba.t}${item.zh}${CONN.fangdao.t}${CONN.guizi.t}${CONN.de.t}${label.t}。`;
+    simp = `${CONN.ba.s}${item.zhs}${CONN.fangdao.s}${CONN.guizi.s}${CONN.de.s}${label.s}。`;
+    py   = `${CONN.ba.py} ${item.py} ${CONN.fangdao.py} ${CONN.guizi.py} ${CONN.de.py} ${label.py}。`;
+  }
+  return {trad, simp, py};
+}
+
+function renderInstructionDisplay(){
+  if(textToggle.checked && state && state.currentSentence){
+    instructionText.innerHTML =
+      `<div class="cn-line">${state.currentSentence.simp}</div>` +
+      `<div class="py-line">${state.currentSentence.py}</div>`;
+  } else if(state && !state.finished){
+    instructionText.textContent = '(Escucha con atención la instrucción de voz…)';
+  }
+}
+
+function askCurrentStep(){
+  const cellI = state.instructionOrder[state.step];
+  const sentence = buildInstruction(cellI);
+  state.currentSentence = sentence;
+  renderInstructionDisplay();
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  replayBtn.disabled = false;
+  speak(sentence.trad);
+}
+
+function replayCurrent(){
+  if(!state || state.finished) return;
+  if(state.currentSentence) speak(state.currentSentence.trad);
+}
+
+/* ============ 判定與流程推進 ============ */
+function handleDrop(itemId, cellI){
+  if(!state || state.finished) return;
+  const cellEl = shelfGrid.querySelector(`[data-cell="${cellI}"]`);
+
+  if(state.filled[cellI]){
+    // 格子已被佔用，視為無效放置，不計入錯誤
+    return;
+  }
+
+  const targetItem = state.currentTargetItem;
+  const targetCell = state.currentTargetCell;
+
+  const itemCorrect = (Number(itemId) === targetItem.id);
+  const cellCorrect  = (cellI === targetCell);
+
+  if(itemCorrect && cellCorrect){
+    // 成功
+    state.filled[cellI] = true;
+    if(!state.filled_item_ids) state.filled_item_ids = new Set();
+    state.filled_item_ids.add(itemId);
+    feedbackEl.textContent = '✔ ¡Correcto!';
+    feedbackEl.className = 'feedback ok';
+    renderShelf();
+    renderTray();
+    state.step++;
+    if(state.step >= 9){
+      finishGame();
+    } else {
+      setTimeout(askCurrentStep, 500);
+    }
+  } else {
+    // 失敗
+    state.errors++;
+    updateErrDisplay();
+    if(cellEl){
+      cellEl.classList.add('shake');
+      setTimeout(()=>cellEl.classList.remove('shake'), 400);
+    }
+    if(!itemCorrect){
+      feedbackEl.textContent = '✘ ¡Objeto equivocado!';
+    } else {
+      feedbackEl.textContent = '✘ ¡Posición equivocada!';
+    }
+    feedbackEl.className = 'feedback err';
+    setTimeout(()=>{
+      if(state.currentSentence) speak(state.currentSentence.trad);
+    }, 600);
+  }
+}
+
+function finishGame(){
+  state.finished = true;
+  stopTimer();
+  instructionText.textContent = '¡Genial! Ya has ordenado todo.';
+  feedbackEl.textContent = '';
+  replayBtn.disabled = true;
+  speak('太棒了，全部都收好了！');
+  finalTime.textContent = elapsedString();
+  finalErrors.textContent = state.errors;
+  endOverlay.classList.add('show');
+}
+
+/* ============ 拖曳（滑鼠 + 觸控 統一用 Pointer Events） ============ */
+let dragCtx = null;
+
+function attachDrag(tile){
+  tile.addEventListener('pointerdown', (e)=>{
+    if(state.finished) return;
+    if(tile.classList.contains('placeholder')) return;
+    e.preventDefault();
+    const rect = tile.getBoundingClientRect();
+    dragCtx = {
+      tile,
+      itemId: Number(tile.dataset.itemId),
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      originParent: tile.parentNode,
+      originNext: tile.nextSibling
+    };
+    tile.setPointerCapture(e.pointerId);
+    tile.classList.add('dragging');
+    tile.style.width = rect.width+'px';
+    tile.style.height = rect.height+'px';
+    tile.style.left = rect.left+'px';
+    tile.style.top = rect.top+'px';
+    // 不搬移 DOM 位置：position:fixed 已可讓物品浮在最上層，
+    // 若中途把元素移出原本父層，部分行動裝置會遺失 pointer capture，導致移動/放開事件收不到。
+  });
+
+  tile.addEventListener('pointermove', (e)=>{
+    if(!dragCtx || dragCtx.tile!==tile) return;
+    tile.style.left = (e.clientX - dragCtx.offsetX)+'px';
+    tile.style.top  = (e.clientY - dragCtx.offsetY)+'px';
+
+    // 高亮懸停中的櫃子格
+    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
+    tile.style.visibility = 'hidden';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    tile.style.visibility = 'visible';
+    const cell = under ? under.closest('.shelf-cell') : null;
+    if(cell && !cell.classList.contains('filled')){
+      cell.classList.add('hover-ok');
+    }
+  });
+
+  tile.addEventListener('pointerup', (e)=>{
+    if(!dragCtx || dragCtx.tile!==tile) return;
+    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
+
+    tile.style.visibility = 'hidden';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    tile.style.visibility = 'visible';
+    const cellEl = under ? under.closest('.shelf-cell') : null;
+
+    // 還原樣式
+    tile.classList.remove('dragging');
+    tile.style.position = '';
+    tile.style.left = '';
+    tile.style.top = '';
+    tile.style.width = '';
+    tile.style.height = '';
+    if(dragCtx.originNext){
+      dragCtx.originParent.insertBefore(tile, dragCtx.originNext);
+    } else {
+      dragCtx.originParent.appendChild(tile);
+    }
+
+    const itemId = dragCtx.itemId;
+    dragCtx = null;
+
+    if(cellEl){
+      const cellI = Number(cellEl.dataset.cell);
+      handleDrop(itemId, cellI);
+    }
+  });
+
+  tile.addEventListener('pointercancel', ()=>{
+    if(!dragCtx || dragCtx.tile!==tile) return;
+    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
+    tile.classList.remove('dragging');
+    tile.style.position = '';
+    tile.style.left = '';
+    tile.style.top = '';
+    tile.style.width = '';
+    tile.style.height = '';
+    tile.style.visibility = '';
+    dragCtx = null;
+  });
+}
+
+/* ============ 遊戲開始 / 重新開始 ============ */
+function startGame(){
+  newGame();
+  renderShelf();
+  renderTray();
+  updateErrDisplay();
+  timerNum.textContent = '00:00';
+  endOverlay.classList.remove('show');
+  startBtn.disabled = true;
+  startTimer();
+  askCurrentStep();
+}
+
+startBtn.addEventListener('click', startGame);
+replayBtn.addEventListener('click', replayCurrent);
+restartBtn.addEventListener('click', startGame);
+textToggle.addEventListener('change', renderInstructionDisplay);
+
+/* 初始畫面：先畫出空櫃子預覽 */
+(function initPreview(){
+  for(let i=0;i<9;i++){
+    const cell = document.createElement('div');
+    cell.className = 'shelf-cell';
+    shelfGrid.appendChild(cell);
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
