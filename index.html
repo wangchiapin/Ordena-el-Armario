@@ -349,7 +349,12 @@
 
 <script>
 (function(){
-
+function sendGAEvent(eventName, params = {}) {
+    if (typeof gtag === 'function') {
+      gtag('event', eventName, params);
+      console.log('GA Event:', eventName, params); // 開發時可按 F12 查看有沒有成功送出
+    }
+  }
 /* ============ 50 樣常見生活物品資料庫 ============
    zh  = 繁體中文（用於語音朗讀，台灣讀音）
    zhs = 簡體中文（顯示用）
