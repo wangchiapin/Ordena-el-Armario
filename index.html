@@ -708,6 +708,10 @@ function handleDrop(itemId, cellI){
 function finishGame(){
   state.finished = true;
   stopTimer();
+  sendGAEvent('game_complete', {
+      'duration_seconds': Math.floor((Date.now()-state.startTime)/1000),
+      'error_count': state.errors
+    });
   instructionText.textContent = '¡Genial! Ya has ordenado todo.';
   feedbackEl.textContent = '';
   replayBtn.disabled = true;
@@ -809,6 +813,7 @@ function attachDrag(tile){
 
 /* ============ 遊戲開始 / 重新開始 ============ */
 function startGame(){
+  sendGAEvent('game_start'); // 放入這裡
   newGame();
   renderShelf();
   renderTray();
@@ -821,9 +826,25 @@ function startGame(){
 }
 
 startBtn.addEventListener('click', startGame);
-replayBtn.addEventListener('click', replayCurrent);
-restartBtn.addEventListener('click', startGame);
-textToggle.addEventListener('change', renderInstructionDisplay);
+replayBtn.addEventListener('click', () => {
+    sendGAEvent('replay_audio'); // 放入這裡
+    replayCurrent();
+  });
+restartBtn.addEventListener('click', () => {
+    sendGAEvent('play_again'); // 放入這裡
+    startGame();
+  });
+textToggle.addEventListener('change', (e) => {
+    sendGAEvent('toggle_hint', { 'status': e.target.checked ? 'on' : 'off' }); // 放入這裡
+    renderInstructionDisplay();
+  });
+  
+window.addEventListener('beforeunload', () => {
+    if (state && !state.finished && state.startTime) {
+      sendGAEvent('game_abandoned', { 'step': state.step }); // 放入這裡
+    }
+  });
+})();
 
 /* 初始畫面：先畫出空櫃子預覽 */
 (function initPreview(){
