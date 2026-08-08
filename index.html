@@ -4,16 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Ordena el Armario | Cada Día Un Minuto</title>
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-M69ZWPFL5M"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-M69ZWPFL5M');
-</script>
-  
 <style>
   :root{
     --ink:#231F1A;
@@ -133,8 +123,9 @@
     font-size:14px;line-height:1.4;color:var(--ink);
     min-height:20px;
   }
-  .instruction-text .cn-line{font-size:15px;font-weight:600;}
-  .instruction-text .py-line{font-size:12px;color:#6b6155;font-style:italic;margin-top:2px;}
+  .instruction-text .cn-line{font-size:14.5px;font-weight:600;}
+  .instruction-text .cn-line.simp{font-size:14.5px;font-weight:600;color:var(--ink);margin-top:1px;}
+  .instruction-text .py-line{font-size:12px;color:#6b6155;font-style:italic;margin-top:3px;}
   .feedback{
     font-size:12.5px;font-weight:700;min-height:16px;
   }
@@ -211,8 +202,9 @@
   .legend-grid .cell{
     display:block;background:#fffdf6;border:1px solid #e4d6b8;border-radius:6px;padding:4px 2px;
     line-height:1.25;
+    font-size:10.5px;
   }
-  .legend-grid .cell .py{display:block;font-size:9.5px;color:#8a7f6f;font-style:italic;}
+  .legend-grid .cell .py{display:block;font-size:9.5px;color:#8a7f6f;font-style:italic;margin-top:1px;}
 
   /* ---------- 右側：櫃子 ---------- */
   .cabinet-wrap{
@@ -349,12 +341,7 @@
 
 <script>
 (function(){
-function sendGAEvent(eventName, params = {}) {
-    if (typeof gtag === 'function') {
-      gtag('event', eventName, params);
-      console.log('GA Event:', eventName, params); // 開發時可按 F12 查看有沒有成功送出
-    }
-  }
+
 /* ============ 50 樣常見生活物品資料庫 ============
    zh  = 繁體中文（用於語音朗讀，台灣讀音）
    zhs = 簡體中文（顯示用）
@@ -408,7 +395,6 @@ const POOL = [
 {id:45, zh:"鏡子",      zhs:"镜子",      py:"jìng zi",         img:"images/圖片45.png"},
 {id:46, zh:"鑰匙",      zhs:"钥匙",      py:"yào shi",         img:"images/圖片46.png"}
 ];
-
 /* ============ 座標與方位詞（含簡體+拼音） ============ */
 // row-major：0=左上角 1=正上方 2=右上角 3=左邊 4=正中間 5=右邊 6=左下角 7=正下方 8=右下角
 const ABS_LABEL = [
@@ -499,13 +485,16 @@ const finalErrors = document.getElementById('finalErrors');
 const restartBtn = document.getElementById('restartBtn');
 const legendGrid = document.getElementById('legendGrid');
 
-/* ============ 方位詞小抄（簡體+拼音） ============ */
+/* ============ 方位詞小抄（繁簡並列＋拼音） ============ */
+function dualText(t, s){
+  return t === s ? t : `${t}／${s}`;
+}
 (function renderLegend(){
   legendGrid.innerHTML = '';
   ABS_LABEL.forEach(l=>{
     const cell = document.createElement('span');
     cell.className = 'cell';
-    cell.innerHTML = `${l.s}<span class="py">${l.py}</span>`;
+    cell.innerHTML = `${dualText(l.t, l.s)}<span class="py">${l.py}</span>`;
     legendGrid.appendChild(cell);
   });
 })();
@@ -528,7 +517,7 @@ function speak(text, onend){
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-TW';
   if(zhVoice) utter.voice = zhVoice;
-  utter.rate = 0.85;
+  utter.rate = 0.92;
   utter.onstart = ()=> speakerIcon.classList.add('speaking');
   utter.onend = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
   utter.onerror = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
@@ -544,10 +533,7 @@ function renderShelf(){
     cell.dataset.cell = i;
     if(state.filled[i]){
       cell.classList.add('filled');
-      const img = document.createElement('img');
-      img.src = state.answerKey[i].img;
-      img.style.width = "80%";
-      cell.appendChild(img);
+      cell.textContent = state.answerKey[i].emoji;
     }
     shelfGrid.appendChild(cell);
   }
@@ -559,13 +545,7 @@ function renderTray(){
     const tile = document.createElement('div');
     tile.className = 'item-tile';
     tile.dataset.itemId = item.id;
-    
-    // 改成建立圖片
-    const img = document.createElement('img');
-    img.src = item.img;
-    img.style.width = "80%"; // 設定圖片大小
-    tile.appendChild(img);
-
+    tile.textContent = item.emoji;
     tile.setAttribute('aria-label', item.zh);
     if(state.filled_item_ids && state.filled_item_ids.has(item.id)){
       tile.classList.add('placeholder');
@@ -630,9 +610,13 @@ function buildInstruction(cellI){
 
 function renderInstructionDisplay(){
   if(textToggle.checked && state && state.currentSentence){
-    instructionText.innerHTML =
-      `<div class="cn-line">${state.currentSentence.simp}</div>` +
-      `<div class="py-line">${state.currentSentence.py}</div>`;
+    const sen = state.currentSentence;
+    let html = `<div class="cn-line trad">${sen.trad}</div>`;
+    if(sen.simp !== sen.trad){
+      html += `<div class="cn-line simp">${sen.simp}</div>`;
+    }
+    html += `<div class="py-line">${sen.py}</div>`;
+    instructionText.innerHTML = html;
   } else if(state && !state.finished){
     instructionText.textContent = '(Escucha con atención la instrucción de voz…)';
   }
@@ -708,10 +692,6 @@ function handleDrop(itemId, cellI){
 function finishGame(){
   state.finished = true;
   stopTimer();
-  sendGAEvent('game_complete', {
-      'duration_seconds': Math.floor((Date.now()-state.startTime)/1000),
-      'error_count': state.errors
-    });
   instructionText.textContent = '¡Genial! Ya has ordenado todo.';
   feedbackEl.textContent = '';
   replayBtn.disabled = true;
@@ -813,7 +793,6 @@ function attachDrag(tile){
 
 /* ============ 遊戲開始 / 重新開始 ============ */
 function startGame(){
-  sendGAEvent('game_start'); // 放入這裡
   newGame();
   renderShelf();
   renderTray();
@@ -826,24 +805,9 @@ function startGame(){
 }
 
 startBtn.addEventListener('click', startGame);
-replayBtn.addEventListener('click', () => {
-    sendGAEvent('replay_audio'); // 放入這裡
-    replayCurrent();
-  });
-restartBtn.addEventListener('click', () => {
-    sendGAEvent('play_again'); // 放入這裡
-    startGame();
-  });
-textToggle.addEventListener('change', (e) => {
-    sendGAEvent('toggle_hint', { 'status': e.target.checked ? 'on' : 'off' }); // 放入這裡
-    renderInstructionDisplay();
-  });
-  
-window.addEventListener('beforeunload', () => {
-    if (state && !state.finished && state.startTime) {
-      sendGAEvent('game_abandoned', { 'step': state.step }); // 放入這裡
-    }
-  });
+replayBtn.addEventListener('click', replayCurrent);
+restartBtn.addEventListener('click', startGame);
+textToggle.addEventListener('change', renderInstructionDisplay);
 
 /* 初始畫面：先畫出空櫃子預覽 */
 (function initPreview(){
