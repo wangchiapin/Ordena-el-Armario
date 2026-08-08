@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Ordena el Armario | Cada Día Un Minuto</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-M69ZWPFL5M"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-M69ZWPFL5M');
+</script>
 <style>
   :root{
     --ink:#231F1A;
@@ -212,6 +220,10 @@
     font-size:10.5px;
   }
   .legend-grid .cell .py{display:block;font-size:9.5px;color:#8a7f6f;font-style:italic;margin-top:1px;}
+  .legend-grid .cell .alt{
+    margin-top:4px;padding-top:4px;
+    border-top:1px dashed #d8c9a3;
+  }
 
   /* ---------- 右側：櫃子 ---------- */
   .cabinet-wrap{
@@ -447,6 +459,13 @@ function relDirection(fromI, toI){
   return null;
 }
 
+/* ============ GA4 匿名事件追蹤 ============ */
+function track(eventName, params){
+  if(typeof gtag === 'function'){
+    gtag('event', eventName, params || {});
+  }
+}
+
 /* ============ 狀態 ============ */
 let state = null;
 
@@ -503,12 +522,20 @@ const legendGrid = document.getElementById('legendGrid');
 function dualText(t, s){
   return t === s ? t : `${t}／${s}`;
 }
+// 「正上方」格額外附上「上面」，「正下方」格額外附上「下面」
+// （這兩個詞意思相通，放同一格比較不會讓小抄過長）
+const LEGEND_ALT = { "正上方": REL_DIR["上面"], "正下方": REL_DIR["下面"] };
 (function renderLegend(){
   legendGrid.innerHTML = '';
   ABS_LABEL.forEach(l=>{
     const cell = document.createElement('span');
     cell.className = 'cell';
-    cell.innerHTML = `${dualText(l.t, l.s)}<span class="py">${l.py}</span>`;
+    let html = `${dualText(l.t, l.s)}<span class="py">${l.py}</span>`;
+    const alt = LEGEND_ALT[l.t];
+    if(alt){
+      html += `<div class="alt">${dualText(alt.t, alt.s)}<span class="py">${alt.py}</span></div>`;
+    }
+    cell.innerHTML = html;
     legendGrid.appendChild(cell);
   });
 })();
@@ -668,7 +695,10 @@ function askCurrentStep(){
 
 function replayCurrent(){
   if(!state || state.finished) return;
-  if(state.currentSentence) speak(state.currentSentence.trad);
+  if(state.currentSentence){
+    speak(state.currentSentence.trad);
+    track('replay_used', { target_item: state.currentTargetItem ? state.currentTargetItem.zh : '' });
+  }
 }
 
 /* ============ 判定與流程推進 ============ */
@@ -712,8 +742,17 @@ function handleDrop(itemId, cellI){
     }
     if(!itemCorrect){
       feedbackEl.textContent = '✘ ¡Objeto equivocado!';
+      track('error_wrong_item', {
+        target_item: targetItem.zh,
+        picked_item: (POOL.find(p=>p.id===Number(itemId))||{}).zh || '',
+        sentence_type: state.currentSentence && state.currentSentence.trad.includes(CONN.fangzai.t) ? 'relative' : 'absolute'
+      });
     } else {
       feedbackEl.textContent = '✘ ¡Posición equivocada!';
+      track('error_wrong_position', {
+        target_item: targetItem.zh,
+        sentence_type: state.currentSentence && state.currentSentence.trad.includes(CONN.fangzai.t) ? 'relative' : 'absolute'
+      });
     }
     feedbackEl.className = 'feedback err';
     setTimeout(()=>{
@@ -729,9 +768,14 @@ function finishGame(){
   feedbackEl.textContent = '';
   replayBtn.disabled = true;
   speak('太棒了，全部都收好了！');
+  const elapsedSec = Math.floor((Date.now()-state.startTime)/1000);
   finalTime.textContent = elapsedString();
   finalErrors.textContent = state.errors;
   endOverlay.classList.add('show');
+  track('game_complete', {
+    time_seconds: elapsedSec,
+    error_count: state.errors
+  });
 }
 
 /* ============ 拖曳（滑鼠 + 觸控 統一用 Pointer Events） ============ */
@@ -835,12 +879,18 @@ function startGame(){
   startBtn.disabled = true;
   startTimer();
   askCurrentStep();
+  track('game_start');
 }
 
 startBtn.addEventListener('click', startGame);
 replayBtn.addEventListener('click', replayCurrent);
 restartBtn.addEventListener('click', startGame);
-textToggle.addEventListener('change', renderInstructionDisplay);
+textToggle.addEventListener('change', ()=>{
+  renderInstructionDisplay();
+  if(textToggle.checked){
+    track('hint_text_shown');
+  }
+});
 
 /* 初始畫面：先畫出空櫃子預覽 */
 (function initPreview(){
