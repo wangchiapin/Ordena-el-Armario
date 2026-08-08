@@ -167,12 +167,19 @@
     border:2px solid #d8c9a3;
     border-radius:12px;
     display:flex;align-items:center;justify-content:center;
-    font-size:28px;
+    font-size:22px;
     cursor:grab;
     touch-action:none;
     user-select:none;
     box-shadow:0 2px 4px rgba(0,0,0,0.12);
     transition: box-shadow .15s, transform .15s, opacity .2s;
+    overflow:hidden;
+    position:relative;
+  }
+  .item-tile img{
+    width:100%;height:100%;object-fit:contain;padding:6px;
+    -webkit-user-drag:none;
+    pointer-events:none;
   }
   .item-tile:active{cursor:grabbing;}
   .item-tile.dragging{
@@ -232,9 +239,15 @@
     border:2px dashed rgba(240,230,210,0.35);
     border-radius:10px;
     display:flex;align-items:center;justify-content:center;
-    font-size:38px;
+    font-size:32px;
     position:relative;
+    overflow:hidden;
     transition:background .15s, border-color .15s, transform .15s;
+  }
+  .shelf-cell img{
+    width:100%;height:100%;object-fit:contain;padding:6px;
+    -webkit-user-drag:none;
+    pointer-events:none;
   }
   .shelf-cell.hover-ok{background:rgba(76,122,94,0.35);border-color:var(--jade);}
   .shelf-cell.filled{
@@ -342,10 +355,11 @@
 <script>
 (function(){
 
-/* ============ 50 樣常見生活物品資料庫 ============
+/* ============ 常見生活物品資料庫 ============
    zh  = 繁體中文（用於語音朗讀，台灣讀音）
    zhs = 簡體中文（顯示用）
    py  = 漢語拼音（讀音以台灣／繁體中文讀音為主）
+   img = 水彩插圖路徑
 */
 const POOL = [
 {id:1,  zh:"長尾夾",    zhs:"长尾夹",    py:"cháng wěi jiā",    img:"images/圖片1.png"},
@@ -524,6 +538,25 @@ function speak(text, onend){
   speechSynthesis.speak(utter);
 }
 
+/* ============ 圖片元件（找不到圖時自動退回文字） ============ */
+function makeItemVisual(item){
+  const img = document.createElement('img');
+  img.src = item.img;
+  img.alt = item.zh;
+  img.draggable = false;
+  img.onerror = function(){
+    // 圖片載入失敗時的備援：顯示文字，方便發現是哪一個檔名有問題
+    const fallback = document.createElement('div');
+    fallback.textContent = item.zh;
+    fallback.style.fontSize = '12px';
+    fallback.style.textAlign = 'center';
+    fallback.style.padding = '4px';
+    fallback.style.color = '#8C2F26';
+    img.replaceWith(fallback);
+  };
+  return img;
+}
+
 /* ============ 畫面渲染 ============ */
 function renderShelf(){
   shelfGrid.innerHTML = '';
@@ -533,7 +566,7 @@ function renderShelf(){
     cell.dataset.cell = i;
     if(state.filled[i]){
       cell.classList.add('filled');
-      cell.textContent = state.answerKey[i].emoji;
+      cell.appendChild(makeItemVisual(state.answerKey[i]));
     }
     shelfGrid.appendChild(cell);
   }
@@ -545,7 +578,7 @@ function renderTray(){
     const tile = document.createElement('div');
     tile.className = 'item-tile';
     tile.dataset.itemId = item.id;
-    tile.textContent = item.emoji;
+    tile.appendChild(makeItemVisual(item));
     tile.setAttribute('aria-label', item.zh);
     if(state.filled_item_ids && state.filled_item_ids.has(item.id)){
       tile.classList.add('placeholder');
