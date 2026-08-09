@@ -155,6 +155,15 @@
   .btn-primary{background:var(--brick);color:#fff;}
   .btn-secondary{background:var(--paper-deep);color:var(--ink);}
   .btn-primary:disabled,.btn-secondary:disabled{opacity:0.45;cursor:not-allowed;}
+  .speed-select{
+    font-family:inherit;
+    border:1px solid var(--paper-deep);
+    border-radius:8px;
+    padding:7px 8px;
+    font-size:12.5px;font-weight:700;
+    background:#fffdf6;color:var(--ink);
+    cursor:pointer;
+  }
   .toggle-row{
     display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;color:#6b6155;
   }
@@ -336,6 +345,11 @@
     <div class="controls-row">
       <button class="btn-primary" id="startBtn">Empezar</button>
       <button class="btn-secondary" id="replayBtn" disabled>🔁 Escuchar de nuevo</button>
+      <select id="speedSelect" class="speed-select">
+        <option value="0.7">🐢 Lento</option>
+        <option value="0.92" selected>🚶 Normal</option>
+        <option value="1.15">🐇 Rápido</option>
+      </select>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="textToggle">
@@ -524,6 +538,7 @@ const finalTime = document.getElementById('finalTime');
 const finalErrors = document.getElementById('finalErrors');
 const restartBtn = document.getElementById('restartBtn');
 const legendGrid = document.getElementById('legendGrid');
+const speedSelect = document.getElementById('speedSelect');
 
 /* ============ 方位詞小抄（繁簡並列＋拼音） ============ */
 function dualText(t, s){
@@ -565,7 +580,7 @@ function speak(text, onend){
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-TW';
   if(zhVoice) utter.voice = zhVoice;
-  utter.rate = 0.92;
+  utter.rate = parseFloat(speedSelect.value) || 0.92;
   utter.onstart = ()=> speakerIcon.classList.add('speaking');
   utter.onend = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
   utter.onerror = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
@@ -896,6 +911,11 @@ textToggle.addEventListener('change', ()=>{
   renderInstructionDisplay();
   if(textToggle.checked){
     track('hint_text_shown');
+  }
+});
+speedSelect.addEventListener('change', ()=>{
+  if(state && !state.finished && state.currentSentence){
+    speak(state.currentSentence.trad);
   }
 });
 
