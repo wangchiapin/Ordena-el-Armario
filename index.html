@@ -66,12 +66,23 @@
     width:100%;max-width:980px;
     display:grid;
     grid-template-columns: 1.15fr 1fr;
+    grid-template-areas:
+      "instr cabinet"
+      "legend cabinet";
     gap:18px;
     align-items:stretch;
   }
   @media (max-width: 760px){
-    .stage{grid-template-columns:1fr;}
+    .stage{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "instr"
+        "cabinet"
+        "legend";
+    }
   }
+  .instr-panel{grid-area:instr;}
+  .cabinet-wrap{grid-area:cabinet;}
 
   .panel{
     background:#fff8ea;
@@ -213,7 +224,7 @@
   }
 
   .legend{
-    margin-top:12px;
+    grid-area:legend;
     background:var(--paper);
     border:1px solid var(--paper-deep);
     border-radius:10px;
@@ -320,7 +331,7 @@
 <div class="stage">
 
   <!-- 左側：指令欄 -->
-  <div class="panel">
+  <div class="panel instr-panel">
     <div class="status-row">
       <div class="status-chip timer">
         <div class="num" id="timerNum">00:00</div>
@@ -360,11 +371,6 @@
       <div class="tray-label">Arrastra estos objetos a la estantería</div>
       <div class="tray" id="tray"></div>
     </div>
-
-    <div class="legend">
-      <h3>Vocabulario de posiciones</h3>
-      <div class="legend-grid" id="legendGrid"></div>
-    </div>
   </div>
 
   <!-- 右側：櫃子 -->
@@ -381,6 +387,12 @@
         <button class="btn-primary" id="restartBtn" style="margin-top:12px;">Jugar de nuevo</button>
       </div>
     </div>
+  </div>
+
+  <!-- 方位詞小抄：獨立區塊，方便手機版排到最下面 -->
+  <div class="legend">
+    <h3>Vocabulario de posiciones</h3>
+    <div class="legend-grid" id="legendGrid"></div>
   </div>
 
 </div>
