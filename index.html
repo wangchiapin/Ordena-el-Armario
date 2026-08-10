@@ -366,6 +366,10 @@
       <input type="checkbox" id="textToggle">
       <label for="textToggle">Mostrar texto de la instrucción (ayuda para principiantes)</label>
     </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="hoverSpeakToggle">
+      <label for="hoverSpeakToggle">Pronunciar el objeto al pasar el cursor (opcional)</label>
+    </div>
 
     <div class="tray-section">
       <div class="tray-label">Arrastra estos objetos a la estantería</div>
@@ -407,7 +411,7 @@
    img = 水彩插圖路徑
 */
 const POOL = [
-{id:1,  zh:"長尾夾",    zhs:"长尾夹",    py:"cháng wěi jiā",    img:"images/圖片1.png"},
+{id:1,  zh:"長尾夾",    zhs:"长尾夹",    py:"cháng wěi jiá",    img:"images/圖片1.png"},
 {id:2,  zh:"盆栽",      zhs:"盆栽",      py:"pén zāi",          img:"images/圖片2.png"},
 {id:3,  zh:"衣架",      zhs:"衣架",      py:"yī jià",          img:"images/圖片3.png"},
 {id:4,  zh:"布鞋",      zhs:"布鞋",      py:"bù xié",          img:"images/圖片4.png"},
@@ -545,6 +549,7 @@ const errNum = document.getElementById('errNum');
 const startBtn = document.getElementById('startBtn');
 const replayBtn = document.getElementById('replayBtn');
 const textToggle = document.getElementById('textToggle');
+const hoverSpeakToggle = document.getElementById('hoverSpeakToggle');
 const endOverlay = document.getElementById('endOverlay');
 const finalTime = document.getElementById('finalTime');
 const finalErrors = document.getElementById('finalErrors');
@@ -599,6 +604,39 @@ function speak(text, onend){
   speechSynthesis.speak(utter);
 }
 
+// 滑鼠移到物品上方時唸出名稱（選用功能）。
+// 不打斷正在播放的指令語音，也不會取消目前佇列，避免跟主要指令互相干擾。
+function speakWord(text){
+  if(!('speechSynthesis' in window)) return;
+  if(speechSynthesis.speaking) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-TW';
+  if(zhVoice) utter.voice = zhVoice;
+  utter.rate = parseFloat(speedSelect.value) || 0.92;
+  speechSynthesis.speak(utter);
+}
+
+function attachHoverSpeak(el, item){
+  let hoverTimer = null;
+  function canSpeak(){
+    return hoverSpeakToggle.checked && state && !state.finished && !dragCtx;
+  }
+  el.addEventListener('pointerenter', (e)=>{
+    if(e.pointerType && e.pointerType !== 'mouse') return; // 觸控裝置沒有真正的「懸停」，不觸發
+    if(!canSpeak()) return;
+    clearTimeout(hoverTimer);
+    // 停留延遲：滑鼠要在同一個物品上停留一小段時間才會發音，
+    // 避免滑鼠移動路徑上「路過」其他格子時誤觸發、講錯物品。
+    hoverTimer = setTimeout(()=>{
+      if(!canSpeak()) return;
+      speakWord(item.zh);
+    }, 400);
+  });
+  el.addEventListener('pointerleave', ()=>{
+    clearTimeout(hoverTimer);
+  });
+}
+
 /* ============ 圖片元件（找不到圖時自動退回文字） ============ */
 function makeItemVisual(item){
   const img = document.createElement('img');
@@ -628,6 +666,7 @@ function renderShelf(){
     if(state.filled[i]){
       cell.classList.add('filled');
       cell.appendChild(makeItemVisual(state.answerKey[i]));
+      attachHoverSpeak(cell, state.answerKey[i]);
     }
     shelfGrid.appendChild(cell);
   }
@@ -641,6 +680,7 @@ function renderTray(){
     tile.dataset.itemId = item.id;
     tile.appendChild(makeItemVisual(item));
     tile.setAttribute('aria-label', item.zh);
+    attachHoverSpeak(tile, item);
     if(state.filled_item_ids && state.filled_item_ids.has(item.id)){
       tile.classList.add('placeholder');
     }
@@ -928,6 +968,11 @@ textToggle.addEventListener('change', ()=>{
 speedSelect.addEventListener('change', ()=>{
   if(state && !state.finished && state.currentSentence){
     speak(state.currentSentence.trad);
+  }
+});
+hoverSpeakToggle.addEventListener('change', ()=>{
+  if(hoverSpeakToggle.checked){
+    track('hover_speak_enabled');
   }
 });
 
