@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ordena el Armario | Cada Día Unos Minutos</title>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M69ZWPFL5M"></script>
@@ -10,11 +10,16 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  // 網址加上 ?debug=1 才會開啟 GA4 偵錯模式（讓 DebugView 看得到資料），
-  // 一般學生玩遊戲不會帶這個參數，不會混進正式數據裡。
+  // 網址加上 ?debug=1 才會開啟 GA4 偵錯模式（讓 DebugView 看得到資料）
   var GA_DEBUG = new URLSearchParams(window.location.search).has('debug');
   gtag('config', 'G-M69ZWPFL5M', GA_DEBUG ? {debug_mode:true} : {});
 </script>
+
+<!-- Firebase（排行榜，專案 memorma-24dab，匿名登入） -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <style>
   :root{
     --ink:#231F1A;
@@ -27,10 +32,11 @@
     --jade-deep:#3A5E48;
     --wood:#7A5233;
     --wood-deep:#5C3D24;
+    --sub:#6b6155;
     --shadow: 0 6px 18px rgba(35,31,26,0.25);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;}
+  html,body{margin:0;padding:0;}
   body{
     background:
       radial-gradient(circle at 10% 10%, rgba(201,162,39,0.08), transparent 40%),
@@ -45,9 +51,13 @@
     padding:16px;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* ---------- 標題列 ---------- */
   .brand{
+    width:100%;max-width:980px;
     display:flex;align-items:center;gap:10px;margin:6px 0 14px;
   }
+  .brand-text{flex:1;min-width:0;}
   .seal{
     width:40px;height:40px;border-radius:6px;background:var(--brick);
     color:var(--paper);display:flex;align-items:center;justify-content:center;
@@ -55,34 +65,37 @@
     font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;
     border:2px solid var(--brick-deep);
     transform:rotate(-2deg);
+    flex-shrink:0;
   }
   .brand h1{
     font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;
     font-size:21px;margin:0;letter-spacing:1px;
   }
-  .brand p{margin:0;font-size:12px;color:#6b6155;letter-spacing:0.5px;}
+  .brand p{margin:0;font-size:12px;color:var(--sub);letter-spacing:0.5px;}
+  .icon-btn{
+    width:40px;height:40px;border-radius:10px;
+    background:#fff8ea;border:1px solid var(--paper-deep);
+    font-size:18px;padding:0;flex-shrink:0;
+    box-shadow:0 2px 6px rgba(35,31,26,0.12);
+  }
 
+  /* ---------- 版面：電腦左右兩欄，手機上下排 ---------- */
   .stage{
     width:100%;max-width:980px;
     display:grid;
     grid-template-columns: 1.15fr 1fr;
     grid-template-areas:
       "instr cabinet"
+      "tray cabinet"
       "legend cabinet";
-    gap:18px;
-    align-items:stretch;
-  }
-  @media (max-width: 760px){
-    .stage{
-      grid-template-columns:1fr;
-      grid-template-areas:
-        "instr"
-        "cabinet"
-        "legend";
-    }
+    grid-template-rows: auto auto 1fr;
+    gap:14px 18px;
+    align-items:start;
   }
   .instr-panel{grid-area:instr;}
+  .tray-panel{grid-area:tray;}
   .cabinet-wrap{grid-area:cabinet;}
+  .legend{grid-area:legend;}
 
   .panel{
     background:#fff8ea;
@@ -94,7 +107,7 @@
     flex-direction:column;
   }
 
-  /* ---------- 左側：指令欄（狀態/指令/操作/拖曳物品/小抄） ---------- */
+  /* ---------- 指令區 ---------- */
   .status-row{display:flex;gap:10px;margin-bottom:10px;}
   .status-chip{
     flex:1;
@@ -107,10 +120,11 @@
   .status-chip .num{
     font-family:"Noto Serif TC","Songti TC",serif;
     font-size:20px;font-weight:700;
+    font-variant-numeric: tabular-nums;
   }
   .status-chip.timer .num{color:var(--jade-deep);}
   .status-chip.err .num{color:var(--brick-deep);}
-  .status-chip .lbl{font-size:10.5px;color:#6b6155;letter-spacing:0.5px;}
+  .status-chip .lbl{font-size:10.5px;color:var(--sub);letter-spacing:0.5px;}
 
   .instruction-card{
     background:linear-gradient(180deg,#fff,var(--paper));
@@ -141,31 +155,27 @@
     100%{box-shadow:0 0 0 0 rgba(76,122,94,0);}
   }
   .instruction-top{display:flex;align-items:center;gap:10px;}
-  .instruction-text{
-    font-size:14px;line-height:1.4;color:var(--ink);
-    min-height:20px;
-  }
-  .instruction-text .cn-line{font-size:14.5px;font-weight:600;}
-  .instruction-text .cn-line.simp{font-size:14.5px;font-weight:600;color:var(--ink);margin-top:1px;}
-  .instruction-text .py-line{font-size:12px;color:#6b6155;font-style:italic;margin-top:3px;}
-  .feedback{
-    font-size:12.5px;font-weight:700;min-height:16px;
-  }
+  .instruction-text{font-size:14px;line-height:1.4;color:var(--ink);min-height:20px;}
+  .instruction-text .cn-line{font-size:15px;font-weight:600;}
+  .instruction-text .py-line{font-size:12px;color:var(--sub);font-style:italic;margin-top:3px;}
+  .instruction-text .zy-line{font-size:12.5px;color:var(--sub);margin-top:3px;letter-spacing:.5px;word-break:keep-all;}
+  .feedback{font-size:12.5px;font-weight:700;min-height:16px;}
   .feedback.err{color:var(--brick-deep);}
   .feedback.ok{color:var(--jade-deep);}
 
-  .controls-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .controls-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;}
   button{
     font-family:inherit;
     border:none;border-radius:8px;
     padding:8px 13px;font-size:12.5px;font-weight:700;
     cursor:pointer;
+    color:var(--ink);
     transition:transform .1s, opacity .15s;
   }
   button:active{transform:scale(0.96);}
   .btn-primary{background:var(--brick);color:#fff;}
   .btn-secondary{background:var(--paper-deep);color:var(--ink);}
-  .btn-primary:disabled,.btn-secondary:disabled{opacity:0.45;cursor:not-allowed;}
+  button:disabled{opacity:0.45;cursor:not-allowed;}
   .speed-select{
     font-family:inherit;
     border:1px solid var(--paper-deep);
@@ -175,22 +185,36 @@
     background:#fffdf6;color:var(--ink);
     cursor:pointer;
   }
-  .toggle-row{
-    display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;color:#6b6155;
-  }
+  .toggle-row{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;color:var(--sub);}
+  .toggle-row input{flex-shrink:0;}
+  #hoverRow{display:none;}
+  @media (hover: hover) and (pointer: fine){ #hoverRow{display:flex;} }
 
-  .tray-section{margin-top:12px;}
-  .tray-label{
-    font-size:11.5px;color:#6b6155;margin:2px 2px 6px;letter-spacing:0.5px;
+  #voiceHint{
+    display:none;
+    margin-top:8px;
+    font-size:11.5px;line-height:1.45;font-weight:600;
+    color:var(--brick-deep);
+    background:#fbeee0;
+    border:1px solid #e8c9a8;
+    border-radius:8px;
+    padding:6px 8px;
+    gap:6px;align-items:flex-start;
   }
+  #voiceHint.show{display:flex;}
+  #voiceHint span{flex:1;}
+  #voiceHint .hint-short{display:none;}
+  #voiceHint button{background:transparent;padding:0 2px;font-size:14px;color:var(--brick-deep);}
+
+  /* ---------- 托盤 ---------- */
+  .tray-label{font-size:11.5px;color:var(--sub);margin:0 2px 6px;letter-spacing:0.5px;}
   .tray{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(5,1fr);
     gap:8px;
     padding:8px;
     background:var(--paper-deep);
     border-radius:12px;
-    min-height:90px;
   }
   .item-tile{
     aspect-ratio:1/1;
@@ -198,12 +222,12 @@
     border:2px solid #d8c9a3;
     border-radius:12px;
     display:flex;align-items:center;justify-content:center;
-    font-size:22px;
     cursor:grab;
     touch-action:none;
     user-select:none;
+    -webkit-user-select:none;
     box-shadow:0 2px 4px rgba(0,0,0,0.12);
-    transition: box-shadow .15s, transform .15s, opacity .2s;
+    transition: box-shadow .15s, transform .15s, opacity .2s, border-color .15s;
     overflow:hidden;
     position:relative;
   }
@@ -212,54 +236,50 @@
     -webkit-user-drag:none;
     pointer-events:none;
   }
-  .item-tile:active{cursor:grabbing;}
+  .item-fallback{font-size:12px;text-align:center;padding:4px;color:var(--brick-deep);}
+  .item-tile.selected{
+    border-color:var(--jade);
+    box-shadow:0 0 0 3px rgba(76,122,94,0.35), 0 4px 10px rgba(0,0,0,0.18);
+    transform:translateY(-3px);
+  }
   .item-tile.dragging{
     position:fixed;
     z-index:999;
     box-shadow:0 10px 24px rgba(0,0,0,0.35);
     transform:scale(1.12);
+    pointer-events:none;
   }
-  .item-tile.placeholder{
-    opacity:0; pointer-events:none;
-  }
+  .item-tile.placeholder{opacity:0;pointer-events:none;}
 
+  /* ---------- 方位詞小抄 ---------- */
   .legend{
-    grid-area:legend;
     background:var(--paper);
     border:1px solid var(--paper-deep);
     border-radius:10px;
     padding:8px 10px;
   }
-  .legend h3{
-    margin:0 0 6px;font-size:11px;letter-spacing:0.5px;color:#6b6155;font-weight:700;
-  }
+  .legend h3{margin:0 0 6px;font-size:11px;letter-spacing:0.5px;color:var(--sub);font-weight:700;}
+  #legendToggle{display:none;}
   .legend-grid{
     display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
-    text-align:center;font-size:11px;
+    text-align:center;
   }
   .legend-grid .cell{
     display:flex;flex-direction:column;justify-content:center;align-items:center;
     background:#fffdf6;border:1px solid #e4d6b8;border-radius:6px;padding:4px 2px;
     line-height:1.25;
-    font-size:10.5px;
-    text-align:center;
+    font-size:11px;
   }
-  .legend-grid .cell .py{display:block;font-size:9.5px;color:#8a7f6f;font-style:italic;margin-top:1px;text-align:center;}
+  .legend-grid .cell .ph{display:block;font-size:9.5px;color:#8a7f6f;margin-top:1px;}
+  .legend-grid .cell .ph.py{font-style:italic;}
   .legend-grid .cell .alt{
     width:100%;
     margin-top:4px;padding-top:4px;
     border-top:1px dashed #d8c9a3;
-    text-align:center;
   }
 
-  /* ---------- 右側：櫃子 ---------- */
-  .cabinet-wrap{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:stretch;
-  }
+  /* ---------- 櫃子 ---------- */
+  .cabinet-wrap{position:relative;justify-content:center;}
   .cabinet{
     background:linear-gradient(180deg,var(--wood),var(--wood-deep));
     border-radius:12px;
@@ -272,27 +292,32 @@
     grid-template-rows:repeat(3,1fr);
     gap:8px;
     aspect-ratio:1/1;
+    width:100%;
+    margin:0 auto;
   }
   .shelf-cell{
     background:rgba(240,230,210,0.12);
     border:2px dashed rgba(240,230,210,0.35);
     border-radius:10px;
     display:flex;align-items:center;justify-content:center;
-    font-size:32px;
     position:relative;
     overflow:hidden;
     transition:background .15s, border-color .15s, transform .15s;
+    cursor:pointer;
   }
   .shelf-cell img{
     width:100%;height:100%;object-fit:contain;padding:6px;
     -webkit-user-drag:none;
     pointer-events:none;
   }
+  /* 已選了物品時，空格子微微發亮，提示可以點 */
+  body.has-selection .shelf-cell:not(.filled){border-color:rgba(240,230,210,0.7);}
   .shelf-cell.hover-ok{background:rgba(76,122,94,0.35);border-color:var(--jade);}
   .shelf-cell.filled{
     background:var(--paper);
     border:2px solid var(--gold);
     box-shadow: inset 0 0 0 2px rgba(0,0,0,0.06);
+    cursor:default;
   }
   .shelf-cell.shake{animation:shake .35s;}
   @keyframes shake{
@@ -303,43 +328,124 @@
     80%{transform:translateX(4px);}
   }
 
-  .end-overlay{
-    position:absolute;inset:0;background:rgba(35,31,26,0.55);
-    display:none;align-items:center;justify-content:center;border-radius:14px;
-    z-index:10;
+  /* ---------- 彈出視窗（結束、設定、排行榜） ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(35,31,26,0.55);
+    display:none;align-items:center;justify-content:center;
+    z-index:100;padding:16px;
   }
-  .end-overlay.show{display:flex;}
-  .end-card{
-    background:var(--paper);border-radius:14px;padding:24px;text-align:center;
-    max-width:280px;box-shadow:var(--shadow);border:2px solid var(--gold);
+  .overlay.show{display:flex;}
+  .modal-card{
+    background:var(--paper);border-radius:14px;padding:22px 20px;text-align:center;
+    width:100%;max-width:340px;box-shadow:var(--shadow);border:2px solid var(--gold);
+    max-height:calc(100dvh - 32px);overflow-y:auto;
   }
-  .end-card h2{margin:0 0 8px;font-family:"Noto Serif TC","Songti TC",serif;color:var(--brick-deep);}
-  .end-card .stat{font-size:14px;margin:6px 0;}
-  .end-card .stat b{font-size:20px;color:var(--jade-deep);}
+  .modal-card h2{margin:0 0 10px;font-family:"Noto Serif TC","Songti TC",serif;color:var(--brick-deep);font-size:20px;}
+  .modal-card .stat{font-size:14px;margin:6px 0;}
+  .modal-card .stat b{font-size:20px;color:var(--jade-deep);}
+  .modal-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+  .save-box{margin-top:14px;padding-top:12px;border-top:1px dashed #d8c9a3;}
+  .save-box input{
+    width:100%;
+    font-family:inherit;font-size:15px;font-weight:600;
+    padding:9px 10px;border-radius:8px;border:1px solid #d8c9a3;background:#fffdf6;
+    text-align:center;color:var(--ink);
+  }
+  .save-box button{width:100%;margin-top:8px;padding:10px;}
+  .save-status{font-size:12px;color:var(--sub);min-height:16px;margin-top:6px;}
+  .text-aid-note{font-size:11px;color:var(--sub);margin-top:4px;}
+
+  .setting-group{text-align:left;margin-top:12px;}
+  .setting-label{font-size:11.5px;color:var(--sub);font-weight:700;margin-bottom:5px;letter-spacing:.5px;}
+  .seg{display:flex;border:1px solid #d8c9a3;border-radius:8px;overflow:hidden;background:#fffdf6;}
+  .seg button{
+    flex:1;border-radius:0;background:transparent;padding:8px 2px;font-size:12.5px;
+    border-left:1px solid #d8c9a3;color:var(--sub);
+  }
+  .seg button:first-child{border-left:0;}
+  .seg button.active{background:var(--brick);color:#fff;}
+  .seg button:active{transform:none;}
+
+  .lb-list{list-style:none;margin:6px 0 0;padding:0;text-align:left;max-height:320px;overflow-y:auto;}
+  .lb-list li{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px dashed #d8c9a3;font-size:13.5px;}
+  .lb-list .rk{width:20px;text-align:right;font-weight:700;color:var(--brick-deep);}
+  .lb-list .nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lb-list .tag{font-size:10px;font-weight:700;color:var(--sub);border:1px solid #d8c9a3;border-radius:4px;padding:0 4px;margin-left:4px;}
+  .lb-list .res{font-size:12px;color:var(--jade-deep);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .lb-list li.me{background:#fbeee0;}
+  .lb-msg{font-size:12.5px;color:var(--sub);padding:10px 0;}
+
+  /* ================= 手機版：同一個畫面放下指令、櫃子、托盤 ================= */
+  @media (max-width: 760px){
+    body{padding:8px 10px 20px;}
+    .brand{margin:2px 0 8px;gap:8px;}
+    .seal{width:30px;height:30px;font-size:17px;}
+    .brand h1{font-size:17px;}
+    .brand p{display:none;}
+    .icon-btn{width:36px;height:36px;font-size:16px;}
+    .stage{
+      grid-template-columns:1fr;
+      grid-template-rows:auto;
+      grid-template-areas:
+        "instr"
+        "cabinet"
+        "tray"
+        "legend";
+      gap:8px;
+    }
+    .panel{padding:8px;border-radius:12px;}
+    .status-row{margin-bottom:6px;gap:6px;}
+    .status-chip{padding:2px 6px;display:flex;align-items:baseline;justify-content:center;gap:6px;}
+    .status-chip .num{font-size:17px;}
+    .instruction-card{min-height:0;padding:7px 10px;gap:2px;}
+    .speaker{width:26px;height:26px;font-size:12px;}
+    .instruction-text{font-size:13px;}
+    .controls-row{margin-top:6px;gap:6px;}
+    .controls-row button,.speed-select{padding:6px 9px;font-size:12px;}
+    .toggle-row{margin-top:5px;}
+    #voiceHint{font-size:10.5px;line-height:1.35;padding:3px 6px;margin-top:5px;}
+    #voiceHint .hint-long{display:none;}
+    #voiceHint .hint-short{display:block;}
+    .cabinet-wrap{padding:6px;}
+    .cabinet{padding:8px;}
+    /* 櫃子大小跟著螢幕高度縮，讓托盤也放得進同一個畫面 */
+    .shelf-grid{width:min(100%, calc(100dvh - 455px));min-width:160px;gap:6px;}
+    body.hint-on .shelf-grid{width:min(100%, calc(100dvh - 510px));}
+    .tray-label{margin:0 2px 4px;}
+    .tray{grid-template-columns:repeat(5,1fr);gap:5px;padding:5px;}
+    .item-tile{border-radius:9px;}
+    .item-tile img{padding:3px;}
+    .legend h3{display:none;}
+    #legendToggle{display:block;width:100%;background:transparent;font-size:12px;color:var(--sub);padding:2px;}
+    .legend .legend-grid{display:none;margin-top:6px;}
+    .legend.open .legend-grid{display:grid;}
+  }
 </style>
 </head>
 <body>
 
 <div class="brand">
   <div class="seal">收</div>
-  <div>
+  <div class="brand-text">
     <h1>Ordena el Armario</h1>
-    <p>Cada Día Un Minuto · práctica auditiva de posiciones en chino</p>
+    <p data-i18n="subtitle"></p>
   </div>
+  <button class="icon-btn" id="rankBtn" aria-label="Ranking">🏆</button>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
 </div>
 
 <div class="stage">
 
-  <!-- 左側：指令欄 -->
+  <!-- 指令區 -->
   <div class="panel instr-panel">
     <div class="status-row">
       <div class="status-chip timer">
         <div class="num" id="timerNum">00:00</div>
-        <div class="lbl">Tiempo</div>
+        <div class="lbl" data-i18n="time"></div>
       </div>
       <div class="status-chip err">
         <div class="num" id="errNum">0</div>
-        <div class="lbl">Errores</div>
+        <div class="lbl" data-i18n="errors"></div>
       </div>
     </div>
 
@@ -347,143 +453,178 @@
       <div class="instruction-top">
         <div class="speaker" id="speakerIcon">🔊</div>
         <div style="flex:1;">
-          <div class="instruction-text" id="instructionText">Pulsa «Empezar» y sigue las instrucciones de voz para ordenar el armario.</div>
+          <div class="instruction-text" id="instructionText"></div>
         </div>
       </div>
       <div class="feedback" id="feedback"></div>
     </div>
 
     <div class="controls-row">
-      <button class="btn-primary" id="startBtn">Empezar</button>
-      <button class="btn-secondary" id="replayBtn" disabled>🔁 Escuchar de nuevo</button>
+      <button class="btn-primary" id="startBtn"></button>
+      <button class="btn-secondary" id="replayBtn" disabled data-i18n="replay"></button>
       <select id="speedSelect" class="speed-select">
-        <option value="0.5">🐢 Lento</option>
-        <option value="0.92" selected>🚶 Normal</option>
-        <option value="1.15">🐇 Rápido</option>
+        <option value="0.5" data-i18n="slow"></option>
+        <option value="0.92" selected data-i18n="normal"></option>
+        <option value="1.15" data-i18n="fast"></option>
       </select>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="textToggle">
-      <label for="textToggle">Mostrar texto de la instrucción (ayuda para principiantes)</label>
+      <label for="textToggle" data-i18n="showText"></label>
     </div>
-    <div class="toggle-row">
+    <div class="toggle-row" id="hoverRow">
       <input type="checkbox" id="hoverSpeakToggle">
-      <label for="hoverSpeakToggle">Pronunciar el objeto al pasar el cursor</label>
+      <label for="hoverSpeakToggle" data-i18n="hoverSpeak"></label>
     </div>
-
-    <div class="tray-section">
-      <div class="tray-label">Arrastra estos objetos a la estantería</div>
-      <div class="tray" id="tray"></div>
-    </div>
+    <div id="voiceHint"><span class="hint-long" data-i18n="noVoice"></span><span class="hint-short" data-i18n="noVoiceShort"></span><button type="button" id="voiceHintClose" aria-label="close">✕</button></div>
   </div>
 
-  <!-- 右側：櫃子 -->
-  <div class="panel cabinet-wrap" id="cabinetWrap">
+  <!-- 托盤 -->
+  <div class="panel tray-panel">
+    <div class="tray-label" data-i18n="trayLabel"></div>
+    <div class="tray" id="tray"></div>
+  </div>
+
+  <!-- 櫃子 -->
+  <div class="panel cabinet-wrap">
     <div class="cabinet">
       <div class="shelf-grid" id="shelfGrid"></div>
     </div>
-
-    <div class="end-overlay" id="endOverlay">
-      <div class="end-card">
-        <h2>¡Completado!</h2>
-        <div class="stat">Tiempo empleado: <b id="finalTime">00:00</b></div>
-        <div class="stat">Errores: <b id="finalErrors">0</b></div>
-        <button class="btn-primary" id="restartBtn" style="margin-top:12px;">Jugar de nuevo</button>
-      </div>
-    </div>
   </div>
 
-  <!-- 方位詞小抄：獨立區塊，方便手機版排到最下面 -->
-  <div class="legend">
-    <h3>Vocabulario de posiciones</h3>
+  <!-- 方位詞小抄 -->
+  <div class="legend" id="legend">
+    <h3 data-i18n="legendTitle"></h3>
+    <button type="button" id="legendToggle"></button>
     <div class="legend-grid" id="legendGrid"></div>
   </div>
+</div>
 
+<!-- 結束 -->
+<div class="overlay" id="endOverlay">
+  <div class="modal-card">
+    <h2 data-i18n="endTitle"></h2>
+    <div class="stat"><span data-i18n="timeUsed"></span>: <b id="finalTime">00:00</b></div>
+    <div class="stat"><span data-i18n="errors"></span>: <b id="finalErrors">0</b></div>
+    <div class="save-box" id="saveBox">
+      <input type="text" id="nameInput" maxlength="14" autocomplete="nickname">
+      <button class="btn-primary" id="saveBtn" data-i18n="save"></button>
+      <div class="save-status" id="saveStatus"></div>
+      <div class="text-aid-note" id="textAidNote" data-i18n="textAidNote"></div>
+    </div>
+    <div class="modal-row">
+      <button class="btn-secondary" id="endRankBtn" data-i18n="ranking"></button>
+      <button class="btn-primary" id="restartBtn" data-i18n="playAgain"></button>
+    </div>
+  </div>
+</div>
+
+<!-- 設定 -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal-card">
+    <h2 data-i18n="settingsTitle"></h2>
+    <div id="settingsBody"></div>
+    <div class="modal-row"><button class="btn-primary" id="settingsClose" data-i18n="close"></button></div>
+  </div>
+</div>
+
+<!-- 排行榜 -->
+<div class="overlay" id="rankOverlay">
+  <div class="modal-card">
+    <h2>🏆 Ranking · Top 10</h2>
+    <div class="lb-msg" id="lbMsg"></div>
+    <ul class="lb-list" id="lbList"></ul>
+    <div class="modal-row"><button class="btn-secondary" id="rankClose" data-i18n="close"></button></div>
+  </div>
 </div>
 
 <script>
 (function(){
 
 /* ============ 常見生活物品資料庫 ============
-   zh  = 繁體中文（用於語音朗讀，台灣讀音）
-   zhs = 簡體中文（顯示用）
-   py  = 漢語拼音（讀音以台灣／繁體中文讀音為主）
-   img = 水彩插圖路徑
+   zh  = 繁體（語音一律念繁體、台灣讀音）
+   zhs = 簡體
+   py  = 拼音（台灣讀音）
+   zy  = 注音（台灣讀音）
 */
 const POOL = [
-{id:1,  zh:"長尾夾",    zhs:"长尾夹",    py:"cháng wěi jiá",    img:"images/圖片1.png"},
-{id:2,  zh:"盆栽",      zhs:"盆栽",      py:"pén zāi",          img:"images/圖片2.png"},
-{id:3,  zh:"衣架",      zhs:"衣架",      py:"yī jià",          img:"images/圖片3.png"},
-{id:4,  zh:"布鞋",      zhs:"布鞋",      py:"bù xié",          img:"images/圖片4.png"},
-{id:5,  zh:"高跟鞋",    zhs:"高跟鞋",    py:"gāo gēn xié",      img:"images/圖片5.png"},
-{id:6,  zh:"拖鞋",      zhs:"拖鞋",      py:"tuō xié",          img:"images/圖片6.png"},
-{id:7,  zh:"掃把",      zhs:"扫把",      py:"sào bǎ",          img:"images/圖片7.png"},
-{id:8,  zh:"電腦",      zhs:"电脑",      py:"diàn nǎo",        img:"images/圖片8.png"},
-{id:9,  zh:"相機",      zhs:"相机",      py:"xiàng jī",        img:"images/圖片9.png"},
-{id:10, zh:"手電筒",    zhs:"手电筒",    py:"shǒu diàn tǒng",  img:"images/圖片10.png"},
-{id:11, zh:"錢包",      zhs:"钱包",      py:"qián bāo",        img:"images/圖片11.png"},
-{id:12, zh:"行動電源",  zhs:"行动电源",  py:"xíng dòng diàn yuán", img:"images/圖片12.png"},
-{id:13, zh:"衣服",      zhs:"衣服",      py:"yī fu",           img:"images/圖片13.png"},
-{id:14, zh:"褲子",      zhs:"裤子",      py:"kù zi",           img:"images/圖片14.png"},
-{id:15, zh:"手錶",      zhs:"手表",      py:"shǒu biǎo",       img:"images/圖片15.png"},
-{id:16, zh:"耳環",      zhs:"耳环",      py:"ěr huán",         img:"images/圖片16.png"},
-{id:17, zh:"筆記本",    zhs:"笔记本",    py:"bǐ jì běn",       img:"images/圖片17.png"},
-{id:18, zh:"蠟燭",      zhs:"蜡烛",      py:"là zhú",          img:"images/圖片18.png"},
-{id:19, zh:"雨傘",      zhs:"雨伞",      py:"yǔ sǎn",          img:"images/圖片19.png"},
-{id:20, zh:"背包",      zhs:"背包",      py:"bēi bāo",         img:"images/圖片20.png"},
-{id:21, zh:"遙控器",    zhs:"遥控器",    py:"yáo kòng qì",     img:"images/圖片21.png"},
-{id:22, zh:"杯子",      zhs:"杯子",      py:"bēi zi",          img:"images/圖片22.png"},
-{id:23, zh:"牙刷",      zhs:"牙刷",      py:"yá shuā",         img:"images/圖片23.png"},
-{id:24, zh:"牙膏",      zhs:"牙膏",      py:"yá gāo",          img:"images/圖片24.png"},
-{id:25, zh:"筷子",      zhs:"筷子",      py:"kuài zi",         img:"images/圖片25.png"},
-{id:26, zh:"刀子",      zhs:"刀子",      py:"dāo zi",          img:"images/圖片26.png"},
-{id:27, zh:"毛巾",      zhs:"毛巾",      py:"máo jīn",         img:"images/圖片27.png"},
-{id:28, zh:"梳子",      zhs:"梳子",      py:"shū zi",          img:"images/圖片28.png"},
-{id:29, zh:"盤子",      zhs:"盘子",      py:"pán zi",          img:"images/圖片29.png"},
-{id:30, zh:"吹風機",    zhs:"吹风机",    py:"chuī fēng jī",    img:"images/圖片30.png"},
-{id:31, zh:"塑膠瓶",    zhs:"塑料瓶",    py:"sù liào píng",    img:"images/圖片31.png"},
-{id:32, zh:"叉子",      zhs:"叉子",      py:"chā zi",          img:"images/圖片32.png"},
-{id:33, zh:"水瓶",      zhs:"水瓶",      py:"shuǐ píng",       img:"images/圖片33.png"},
-{id:34, zh:"桶子",      zhs:"桶子",      py:"tǒng zi",         img:"images/圖片34.png"},
-{id:35, zh:"鍋子",      zhs:"锅子",      py:"guō zi",          img:"images/圖片35.png"},
-{id:36, zh:"湯匙",      zhs:"汤匙",      py:"tāng chí",        img:"images/圖片36.png"},
-{id:37, zh:"鋁罐",      zhs:"铝罐",      py:"lǚ guàn",         img:"images/圖片37.png"},
-{id:38, zh:"衛生紙",    zhs:"卫生纸",    py:"wèi shēng zhǐ",   img:"images/圖片38.png"},
-{id:39, zh:"釘書機",    zhs:"订书机",    py:"dìng shū jī",     img:"images/圖片39.png"},
-{id:40, zh:"電池",      zhs:"电池",      py:"diàn chí",        img:"images/圖片40.png"},
-{id:41, zh:"原子筆",    zhs:"原子笔",    py:"yuán zǐ bǐ",      img:"images/圖片41.png"},
-{id:42, zh:"鉛筆",      zhs:"铅笔",      py:"qiān bǐ",         img:"images/圖片42.png"},
-{id:43, zh:"橡皮擦",    zhs:"橡皮擦",    py:"xiàng pí cā",     img:"images/圖片43.png"},
-{id:44, zh:"眼鏡",      zhs:"眼镜",      py:"yǎn jìng",        img:"images/圖片44.png"},
-{id:45, zh:"鏡子",      zhs:"镜子",      py:"jìng zi",         img:"images/圖片45.png"},
-{id:46, zh:"鑰匙",      zhs:"钥匙",      py:"yào shi",         img:"images/圖片46.png"}
+{id:1,  zh:"長尾夾",   zhs:"长尾夹",   py:"cháng wěi jiá",       zy:"ㄔㄤˊ ㄨㄟˇ ㄐㄧㄚˊ"},
+{id:2,  zh:"盆栽",     zhs:"盆栽",     py:"pén zāi",             zy:"ㄆㄣˊ ㄗㄞ"},
+{id:3,  zh:"衣架",     zhs:"衣架",     py:"yī jià",              zy:"ㄧ ㄐㄧㄚˋ"},
+{id:4,  zh:"布鞋",     zhs:"布鞋",     py:"bù xié",              zy:"ㄅㄨˋ ㄒㄧㄝˊ"},
+{id:5,  zh:"高跟鞋",   zhs:"高跟鞋",   py:"gāo gēn xié",         zy:"ㄍㄠ ㄍㄣ ㄒㄧㄝˊ"},
+{id:6,  zh:"拖鞋",     zhs:"拖鞋",     py:"tuō xié",             zy:"ㄊㄨㄛ ㄒㄧㄝˊ"},
+{id:7,  zh:"掃把",     zhs:"扫把",     py:"sào bǎ",              zy:"ㄙㄠˋ ㄅㄚˇ"},
+{id:8,  zh:"電腦",     zhs:"电脑",     py:"diàn nǎo",            zy:"ㄉㄧㄢˋ ㄋㄠˇ"},
+{id:9,  zh:"相機",     zhs:"相机",     py:"xiàng jī",            zy:"ㄒㄧㄤˋ ㄐㄧ"},
+{id:10, zh:"手電筒",   zhs:"手电筒",   py:"shǒu diàn tǒng",      zy:"ㄕㄡˇ ㄉㄧㄢˋ ㄊㄨㄥˇ"},
+{id:11, zh:"錢包",     zhs:"钱包",     py:"qián bāo",            zy:"ㄑㄧㄢˊ ㄅㄠ"},
+{id:12, zh:"行動電源", zhs:"行动电源", py:"xíng dòng diàn yuán", zy:"ㄒㄧㄥˊ ㄉㄨㄥˋ ㄉㄧㄢˋ ㄩㄢˊ"},
+{id:13, zh:"衣服",     zhs:"衣服",     py:"yī fú",               zy:"ㄧ ㄈㄨˊ"},
+{id:14, zh:"褲子",     zhs:"裤子",     py:"kù zi",               zy:"ㄎㄨˋ ˙ㄗ"},
+{id:15, zh:"手錶",     zhs:"手表",     py:"shǒu biǎo",           zy:"ㄕㄡˇ ㄅㄧㄠˇ"},
+{id:16, zh:"耳環",     zhs:"耳环",     py:"ěr huán",             zy:"ㄦˇ ㄏㄨㄢˊ"},
+{id:17, zh:"筆記本",   zhs:"笔记本",   py:"bǐ jì běn",           zy:"ㄅㄧˇ ㄐㄧˋ ㄅㄣˇ"},
+{id:18, zh:"蠟燭",     zhs:"蜡烛",     py:"là zhú",              zy:"ㄌㄚˋ ㄓㄨˊ"},
+{id:19, zh:"雨傘",     zhs:"雨伞",     py:"yǔ sǎn",              zy:"ㄩˇ ㄙㄢˇ"},
+{id:20, zh:"背包",     zhs:"背包",     py:"bēi bāo",             zy:"ㄅㄟ ㄅㄠ"},
+{id:21, zh:"遙控器",   zhs:"遥控器",   py:"yáo kòng qì",         zy:"ㄧㄠˊ ㄎㄨㄥˋ ㄑㄧˋ"},
+{id:22, zh:"杯子",     zhs:"杯子",     py:"bēi zi",              zy:"ㄅㄟ ˙ㄗ"},
+{id:23, zh:"牙刷",     zhs:"牙刷",     py:"yá shuā",             zy:"ㄧㄚˊ ㄕㄨㄚ"},
+{id:24, zh:"牙膏",     zhs:"牙膏",     py:"yá gāo",              zy:"ㄧㄚˊ ㄍㄠ"},
+{id:25, zh:"筷子",     zhs:"筷子",     py:"kuài zi",             zy:"ㄎㄨㄞˋ ˙ㄗ"},
+{id:26, zh:"刀子",     zhs:"刀子",     py:"dāo zi",              zy:"ㄉㄠ ˙ㄗ"},
+{id:27, zh:"毛巾",     zhs:"毛巾",     py:"máo jīn",             zy:"ㄇㄠˊ ㄐㄧㄣ"},
+{id:28, zh:"梳子",     zhs:"梳子",     py:"shū zi",              zy:"ㄕㄨ ˙ㄗ"},
+{id:29, zh:"盤子",     zhs:"盘子",     py:"pán zi",              zy:"ㄆㄢˊ ˙ㄗ"},
+{id:30, zh:"吹風機",   zhs:"吹风机",   py:"chuī fēng jī",        zy:"ㄔㄨㄟ ㄈㄥ ㄐㄧ"},
+{id:31, zh:"塑膠瓶",   zhs:"塑胶瓶",   py:"sù jiāo píng",        zy:"ㄙㄨˋ ㄐㄧㄠ ㄆㄧㄥˊ"},
+{id:32, zh:"叉子",     zhs:"叉子",     py:"chā zi",              zy:"ㄔㄚ ˙ㄗ"},
+{id:33, zh:"水瓶",     zhs:"水瓶",     py:"shuǐ píng",           zy:"ㄕㄨㄟˇ ㄆㄧㄥˊ"},
+{id:34, zh:"桶子",     zhs:"桶子",     py:"tǒng zi",             zy:"ㄊㄨㄥˇ ˙ㄗ"},
+{id:35, zh:"鍋子",     zhs:"锅子",     py:"guō zi",              zy:"ㄍㄨㄛ ˙ㄗ"},
+{id:36, zh:"湯匙",     zhs:"汤匙",     py:"tāng chí",            zy:"ㄊㄤ ㄔˊ"},
+{id:37, zh:"鋁罐",     zhs:"铝罐",     py:"lǚ guàn",             zy:"ㄌㄩˇ ㄍㄨㄢˋ"},
+{id:38, zh:"衛生紙",   zhs:"卫生纸",   py:"wèi shēng zhǐ",       zy:"ㄨㄟˋ ㄕㄥ ㄓˇ"},
+{id:39, zh:"釘書機",   zhs:"订书机",   py:"dìng shū jī",         zy:"ㄉㄧㄥˋ ㄕㄨ ㄐㄧ"},
+{id:40, zh:"電池",     zhs:"电池",     py:"diàn chí",            zy:"ㄉㄧㄢˋ ㄔˊ"},
+{id:41, zh:"原子筆",   zhs:"原子笔",   py:"yuán zǐ bǐ",          zy:"ㄩㄢˊ ㄗˇ ㄅㄧˇ"},
+{id:42, zh:"鉛筆",     zhs:"铅笔",     py:"qiān bǐ",             zy:"ㄑㄧㄢ ㄅㄧˇ"},
+{id:43, zh:"橡皮擦",   zhs:"橡皮擦",   py:"xiàng pí cā",         zy:"ㄒㄧㄤˋ ㄆㄧˊ ㄘㄚ"},
+{id:44, zh:"眼鏡",     zhs:"眼镜",     py:"yǎn jìng",            zy:"ㄧㄢˇ ㄐㄧㄥˋ"},
+{id:45, zh:"鏡子",     zhs:"镜子",     py:"jìng zi",             zy:"ㄐㄧㄥˋ ˙ㄗ"},
+{id:46, zh:"鑰匙",     zhs:"钥匙",     py:"yào shi",             zy:"ㄧㄠˋ ˙ㄕ"}
 ];
-/* ============ 座標與方位詞（含簡體+拼音） ============ */
+POOL.forEach(p => { p.t = p.zh; p.s = p.zhs; });
+const POOL_BY_ID = Object.fromEntries(POOL.map(p => [p.id, p]));
+
+/* ============ 方位詞與連接詞 ============ */
 // row-major：0=左上角 1=正上方 2=右上角 3=左邊 4=正中間 5=右邊 6=左下角 7=正下方 8=右下角
 const ABS_LABEL = [
-  {t:"左上角", s:"左上角", py:"zuǒ shàng jiǎo"},
-  {t:"正上方", s:"正上方", py:"zhèng shàng fāng"},
-  {t:"右上角", s:"右上角", py:"yòu shàng jiǎo"},
-  {t:"左邊",   s:"左边",   py:"zuǒ biān"},
-  {t:"正中間", s:"正中间", py:"zhèng zhōng jiān"},
-  {t:"右邊",   s:"右边",   py:"yòu biān"},
-  {t:"左下角", s:"左下角", py:"zuǒ xià jiǎo"},
-  {t:"正下方", s:"正下方", py:"zhèng xià fāng"},
-  {t:"右下角", s:"右下角", py:"yòu xià jiǎo"}
+  {t:"左上角", s:"左上角", py:"zuǒ shàng jiǎo",   zy:"ㄗㄨㄛˇ ㄕㄤˋ ㄐㄧㄠˇ"},
+  {t:"正上方", s:"正上方", py:"zhèng shàng fāng", zy:"ㄓㄥˋ ㄕㄤˋ ㄈㄤ"},
+  {t:"右上角", s:"右上角", py:"yòu shàng jiǎo",   zy:"ㄧㄡˋ ㄕㄤˋ ㄐㄧㄠˇ"},
+  {t:"左邊",   s:"左边",   py:"zuǒ biān",         zy:"ㄗㄨㄛˇ ㄅㄧㄢ"},
+  {t:"正中間", s:"正中间", py:"zhèng zhōng jiān", zy:"ㄓㄥˋ ㄓㄨㄥ ㄐㄧㄢ"},
+  {t:"右邊",   s:"右边",   py:"yòu biān",         zy:"ㄧㄡˋ ㄅㄧㄢ"},
+  {t:"左下角", s:"左下角", py:"zuǒ xià jiǎo",     zy:"ㄗㄨㄛˇ ㄒㄧㄚˋ ㄐㄧㄠˇ"},
+  {t:"正下方", s:"正下方", py:"zhèng xià fāng",   zy:"ㄓㄥˋ ㄒㄧㄚˋ ㄈㄤ"},
+  {t:"右下角", s:"右下角", py:"yòu xià jiǎo",     zy:"ㄧㄡˋ ㄒㄧㄚˋ ㄐㄧㄠˇ"}
 ];
 const REL_DIR = {
-  "上面": {t:"上面", s:"上面", py:"shàng miàn"},
-  "下面": {t:"下面", s:"下面", py:"xià miàn"},
-  "左邊": {t:"左邊", s:"左边", py:"zuǒ biān"},
-  "右邊": {t:"右邊", s:"右边", py:"yòu biān"}
+  "上面": {t:"上面", s:"上面", py:"shàng miàn", zy:"ㄕㄤˋ ㄇㄧㄢˋ"},
+  "下面": {t:"下面", s:"下面", py:"xià miàn",   zy:"ㄒㄧㄚˋ ㄇㄧㄢˋ"},
+  "左邊": {t:"左邊", s:"左边", py:"zuǒ biān",   zy:"ㄗㄨㄛˇ ㄅㄧㄢ"},
+  "右邊": {t:"右邊", s:"右边", py:"yòu biān",   zy:"ㄧㄡˋ ㄅㄧㄢ"}
 };
 const CONN = {
-  ba:     {t:"把",   s:"把",   py:"bǎ"},
-  fangdao:{t:"放到", s:"放到", py:"fàng dào"},
-  fangzai:{t:"放在", s:"放在", py:"fàng zài"},
-  de:     {t:"的",   s:"的",   py:"de"},
-  guizi:  {t:"櫃子",  s:"柜子", py:"guì zi"}
+  ba:     {t:"把",   s:"把",   py:"bǎ",       zy:"ㄅㄚˇ"},
+  fangdao:{t:"放到", s:"放到", py:"fàng dào", zy:"ㄈㄤˋ ㄉㄠˋ"},
+  fangzai:{t:"放在", s:"放在", py:"fàng zài", zy:"ㄈㄤˋ ㄗㄞˋ"},
+  de:     {t:"的",   s:"的",   py:"de",       zy:"˙ㄉㄜ"},
+  guizi:  {t:"櫃子", s:"柜子", py:"guì zi",   zy:"ㄍㄨㄟˋ ˙ㄗ"}
 };
+const DONE_SPEECH = '太棒了，全部都收好了！';
 
 function rc(i){ return {row: Math.floor(i/3), col: i%3}; }
 // 從 fromCell 看向 toCell 的相對方位（僅上下左右，需正交相鄰）
@@ -496,15 +637,96 @@ function relDirection(fromI, toI){
   return null;
 }
 
-/* ============ GA4 匿名事件追蹤 ============ */
-function track(eventName, params){
-  if(typeof gtag === 'function'){
-    gtag('event', eventName, params || {});
+/* ============ 介面文字（西班牙文／英文） ============ */
+const UI = {
+  es: {
+    subtitle: 'Cada Día Un Minuto · práctica auditiva de posiciones en chino',
+    time: 'Tiempo', errors: 'Errores',
+    intro: 'Pulsa «Empezar» y sigue las instrucciones de voz para ordenar el armario.',
+    listen: '(Escucha con atención la instrucción de voz…)',
+    start: 'Empezar', restart: 'Reiniciar',
+    confirmRestart: '¿Reiniciar la partida? Se perderá el progreso actual.',
+    replay: '🔁 Escuchar de nuevo',
+    slow: '🐢 Lento', normal: '🚶 Normal', fast: '🐇 Rápido',
+    showText: 'Mostrar texto de la instrucción (ayuda para principiantes)',
+    hoverSpeak: 'Pronunciar el objeto al pasar el cursor',
+    trayLabel: 'Toca un objeto y luego una casilla de la estantería (o arrástralo)',
+    legendTitle: 'Vocabulario de posiciones', legendShow: '📋 Ver vocabulario de posiciones', legendHide: '📋 Ocultar vocabulario',
+    ok: '✔ ¡Correcto!', wrongItem: '✘ ¡Objeto equivocado!', wrongPos: '✘ ¡Posición equivocada!',
+    done: '¡Genial! Ya has ordenado todo.',
+    endTitle: '¡Completado!', timeUsed: 'Tiempo empleado', playAgain: 'Jugar de nuevo',
+    namePh: 'Escribe tu nombre', save: 'Guardar en el ranking', nameErr: 'Escribe tu nombre para guardar.',
+    saving: 'Guardando…', saved: '¡Guardado en el ranking!', saveFail: 'No se pudo guardar. Inténtalo de nuevo.',
+    notBetter: (e, tm) => `Tu mejor resultado sigue siendo: ${e} errores · ${tm}`,
+    textAidNote: 'Jugaste con el texto visible: tu resultado aparecerá marcado «con texto».',
+    ranking: '🏆 Ranking', loading: 'Cargando…', lbEmpty: '¡Todavía nadie está en el ranking. Sé el primero!',
+    lbFail: 'No se pudo cargar el ranking', errUnit: 'errores', withText: 'con texto',
+    settingsTitle: '⚙️ Ajustes', close: 'Cerrar',
+    setScript: 'Caracteres', setLang: 'Idioma', setPhon: 'Pronunciación',
+    phonNone: 'Nada', phonBoth: 'Ambos',
+    noVoiceShort: '🔇 Tu dispositivo no tiene voz en chino; mostramos el texto de la instrucción.',
+    noVoice: '🔇 Tu dispositivo no tiene voz en chino, por eso no se escucha la instrucción. Activamos el texto para que puedas jugar. Puedes instalar una voz de chino (Taiwán) en los ajustes de idioma o de voz de tu sistema.'
+  },
+  en: {
+    subtitle: 'One Minute a Day · Chinese listening practice: positions',
+    time: 'Time', errors: 'Errors',
+    intro: 'Press “Start” and follow the voice instructions to tidy up the cabinet.',
+    listen: '(Listen carefully to the voice instruction…)',
+    start: 'Start', restart: 'Restart',
+    confirmRestart: 'Restart the game? Your current progress will be lost.',
+    replay: '🔁 Listen again',
+    slow: '🐢 Slow', normal: '🚶 Normal', fast: '🐇 Fast',
+    showText: 'Show the instruction text (help for beginners)',
+    hoverSpeak: 'Say the object name on mouse hover',
+    trayLabel: 'Tap an object, then a space on the shelf (or drag it)',
+    legendTitle: 'Position words', legendShow: '📋 Show position words', legendHide: '📋 Hide position words',
+    ok: '✔ Correct!', wrongItem: '✘ Wrong object!', wrongPos: '✘ Wrong position!',
+    done: 'Great! Everything is tidied up.',
+    endTitle: 'Completed!', timeUsed: 'Time', playAgain: 'Play again',
+    namePh: 'Your name', save: 'Save to ranking', nameErr: 'Enter your name to save.',
+    saving: 'Saving…', saved: 'Saved to the ranking!', saveFail: 'Could not save. Please try again.',
+    notBetter: (e, tm) => `Your best result is still: ${e} errors · ${tm}`,
+    textAidNote: 'You played with the text shown: your result will be marked “with text”.',
+    ranking: '🏆 Ranking', loading: 'Loading…', lbEmpty: 'No one is in the ranking yet. Be the first!',
+    lbFail: 'Could not load the ranking', errUnit: 'errors', withText: 'with text',
+    settingsTitle: '⚙️ Settings', close: 'Close',
+    setScript: 'Characters', setLang: 'Language', setPhon: 'Pronunciation',
+    phonNone: 'None', phonBoth: 'Both',
+    noVoiceShort: '🔇 No Chinese voice on this device; the instruction text is shown instead.',
+    noVoice: "🔇 Your device has no Chinese voice, so you can't hear the instructions. We turned on the text so you can still play. You can install a Chinese (Taiwan) voice in your system's language or speech settings."
   }
+};
+
+/* ============ 設定（記在玩家瀏覽器） ============ */
+const SETTINGS_KEY = 'ordena_settings';
+const settings = { script: 'trad', lang: 'es', phon: 'pinyin' };
+try {
+  const sv = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+  if (sv.script === 'trad' || sv.script === 'simp') settings.script = sv.script;
+  if (sv.lang === 'es' || sv.lang === 'en') settings.lang = sv.lang;
+  if (['none','pinyin','zhuyin','both'].includes(sv.phon)) settings.phon = sv.phon;
+} catch(e){}
+function saveSettings(){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){} }
+function t(k){ return UI[settings.lang][k]; }
+function hz(tok){ return settings.script === 'trad' ? tok.t : tok.s; }
+
+/* ============ GA4 ============ */
+function track(eventName, params){
+  if(typeof gtag === 'function') gtag('event', eventName, params || {});
 }
+
+/* ============ DOM ============ */
+const $ = id => document.getElementById(id);
+const shelfGrid = $('shelfGrid'), tray = $('tray');
+const instructionText = $('instructionText'), feedbackEl = $('feedback'), speakerIcon = $('speakerIcon');
+const timerNum = $('timerNum'), errNum = $('errNum');
+const startBtn = $('startBtn'), replayBtn = $('replayBtn');
+const textToggle = $('textToggle'), hoverSpeakToggle = $('hoverSpeakToggle'), speedSelect = $('speedSelect');
+const endOverlay = $('endOverlay'), legendGrid = $('legendGrid');
 
 /* ============ 狀態 ============ */
 let state = null;
+let gameId = 0;
 
 function shuffle(arr){
   const a = arr.slice();
@@ -516,81 +738,106 @@ function shuffle(arr){
 }
 
 function newGame(){
-  const chosenItems = shuffle(POOL).slice(0,9);           // 隨機取 9 樣物品
-  const cellOrder = shuffle([0,1,2,3,4,5,6,7,8]);          // 物品對應到哪個格子（隨機配對）
-  const answerKey = {};                                    // cellIndex -> item
+  const chosenItems = shuffle(POOL).slice(0,9);
+  const cellOrder = shuffle([0,1,2,3,4,5,6,7,8]);
+  const answerKey = {};
   chosenItems.forEach((item,i)=>{ answerKey[cellOrder[i]] = item; });
-  const instructionOrder = shuffle([0,1,2,3,4,5,6,7,8]);   // 出題（填格）順序
-
   state = {
     answerKey,
-    instructionOrder,
+    instructionOrder: shuffle([0,1,2,3,4,5,6,7,8]),
     step: 0,
-    filled: {},          // cellIndex -> true
+    filled: {},
+    placedIds: new Set(),
     errors: 0,
     startTime: null,
     timerInterval: null,
     currentTargetCell: null,
     currentTargetItem: null,
+    currentTokens: null,
     finished: false,
+    locked: false,          // 答對後到下一題之間，暫時不接受放置
+    textAid: textToggle.checked,
     trayItems: shuffle(chosenItems),
+    selectedId: null
   };
   return state;
 }
 
-/* ============ DOM 參照 ============ */
-const shelfGrid = document.getElementById('shelfGrid');
-const tray = document.getElementById('tray');
-const instructionText = document.getElementById('instructionText');
-const feedbackEl = document.getElementById('feedback');
-const speakerIcon = document.getElementById('speakerIcon');
-const timerNum = document.getElementById('timerNum');
-const errNum = document.getElementById('errNum');
-const startBtn = document.getElementById('startBtn');
-const replayBtn = document.getElementById('replayBtn');
-const textToggle = document.getElementById('textToggle');
-const hoverSpeakToggle = document.getElementById('hoverSpeakToggle');
-const endOverlay = document.getElementById('endOverlay');
-const finalTime = document.getElementById('finalTime');
-const finalErrors = document.getElementById('finalErrors');
-const restartBtn = document.getElementById('restartBtn');
-const legendGrid = document.getElementById('legendGrid');
-const speedSelect = document.getElementById('speedSelect');
-
-/* ============ 方位詞小抄（繁簡並列＋拼音） ============ */
-function dualText(t, s){
-  return t === s ? t : `${t}／${s}`;
+/* ============ 套用語言／字體到畫面 ============ */
+function applyAll(){
+  document.documentElement.lang = settings.lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = t(el.dataset.i18n);
+    if (typeof v === 'string') el.textContent = v;
+  });
+  $('nameInput').placeholder = t('namePh');
+  updateStartBtn();
+  renderLegend();
+  renderInstructionDisplay();
+  if (state) refreshAlts();
+  renderSettings();
+  if ($('rankOverlay').classList.contains('show')) loadRanking();
+  if (lastResult && endOverlay.classList.contains('show')) renderEndCard();
 }
-// 「正上方」格額外附上「上面」，「正下方」格額外附上「下面」
-// （這兩個詞意思相通，放同一格比較不會讓小抄過長）
-const LEGEND_ALT = { "正上方": REL_DIR["上面"], "正下方": REL_DIR["下面"] };
-(function renderLegend(){
+
+function updateStartBtn(){
+  startBtn.textContent = (state && !state.finished) ? t('restart') : t('start');
+}
+
+/* ============ 方位詞小抄 ============ */
+const LEGEND_ALT = { 1: REL_DIR["上面"], 7: REL_DIR["下面"] };
+function phonHTML(tok){
+  let h = '';
+  if (settings.phon === 'pinyin' || settings.phon === 'both') h += `<span class="ph py">${tok.py}</span>`;
+  if (settings.phon === 'zhuyin' || settings.phon === 'both') h += `<span class="ph">${tok.zy}</span>`;
+  return h;
+}
+function renderLegend(){
   legendGrid.innerHTML = '';
-  ABS_LABEL.forEach(l=>{
+  ABS_LABEL.forEach((l, i) => {
     const cell = document.createElement('span');
     cell.className = 'cell';
-    let html = `${dualText(l.t, l.s)}<span class="py">${l.py}</span>`;
-    const alt = LEGEND_ALT[l.t];
-    if(alt){
-      html += `<div class="alt">${dualText(alt.t, alt.s)}<span class="py">${alt.py}</span></div>`;
-    }
+    let html = `${hz(l)}${phonHTML(l)}`;
+    const alt = LEGEND_ALT[i];
+    if (alt) html += `<div class="alt">${hz(alt)}${phonHTML(alt)}</div>`;
     cell.innerHTML = html;
     legendGrid.appendChild(cell);
   });
-})();
+  $('legendToggle').textContent = $('legend').classList.contains('open') ? t('legendHide') : t('legendShow');
+}
+$('legendToggle').addEventListener('click', () => {
+  $('legend').classList.toggle('open');
+  renderLegend();
+});
 
 /* ============ 語音 ============ */
 let zhVoice = null;
 function pickVoice(){
+  if (!('speechSynthesis' in window)) return;
   const voices = speechSynthesis.getVoices();
-  zhVoice = voices.find(v=>v.lang==='zh-TW') ||
-            voices.find(v=>v.lang && v.lang.toLowerCase().startsWith('zh')) ||
+  zhVoice = voices.find(v=>/zh[-_]TW/i.test(v.lang)) ||
+            voices.find(v=>v.lang && (v.lang.toLowerCase().startsWith('zh') || /cmn/i.test(v.lang))) ||
             null;
+  if (zhVoice){ $('voiceHint').classList.remove('show'); document.body.classList.remove('hint-on'); }
+}
+let voiceHintDismissed = false;
+function noVoiceDetected(){
+  if (!voiceHintDismissed){ $('voiceHint').classList.add('show'); document.body.classList.add('hint-on'); }
+  if (!textToggle.checked){
+    textToggle.checked = true;
+    if (state && !state.finished) state.textAid = true;
+    renderInstructionDisplay();
+  }
 }
 if('speechSynthesis' in window){
-  speechSynthesis.onvoiceschanged = pickVoice;
+  speechSynthesis.addEventListener('voiceschanged', pickVoice);
   pickVoice();
+  setTimeout(() => { pickVoice(); if (!zhVoice) noVoiceDetected(); }, 2000);
+} else {
+  noVoiceDetected();
 }
+$('voiceHintClose').addEventListener('click', () => { voiceHintDismissed = true; $('voiceHint').classList.remove('show'); document.body.classList.remove('hint-on'); });
+
 function speak(text, onend){
   if(!('speechSynthesis' in window)){ if(onend) onend(); return; }
   speechSynthesis.cancel();
@@ -604,11 +851,9 @@ function speak(text, onend){
   speechSynthesis.speak(utter);
 }
 
-// 滑鼠移到物品上方時唸出名稱（選用功能）。
-// 不打斷正在播放的指令語音，也不會取消目前佇列，避免跟主要指令互相干擾。
-function speakWord(text){
-  if(!('speechSynthesis' in window)) return;
-  if(speechSynthesis.speaking) return;
+// 滑鼠停在物品上念名稱（選用）：不打斷正在念的指令
+function speakWordSoft(text){
+  if(!('speechSynthesis' in window) || speechSynthesis.speaking) return;
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-TW';
   if(zhVoice) utter.voice = zhVoice;
@@ -618,56 +863,54 @@ function speakWord(text){
 
 function attachHoverSpeak(el, item){
   let hoverTimer = null;
-  function canSpeak(){
-    return hoverSpeakToggle.checked && state && !state.finished && !dragCtx;
-  }
+  const canSpeak = () => hoverSpeakToggle.checked && state && !state.finished && !dragCtx;
   el.addEventListener('pointerenter', (e)=>{
-    if(e.pointerType && e.pointerType !== 'mouse') return; // 觸控裝置沒有真正的「懸停」，不觸發
+    if(e.pointerType && e.pointerType !== 'mouse') return;
     if(!canSpeak()) return;
     clearTimeout(hoverTimer);
-    // 停留延遲：滑鼠要在同一個物品上停留一小段時間才會發音，
-    // 避免滑鼠移動路徑上「路過」其他格子時誤觸發、講錯物品。
-    hoverTimer = setTimeout(()=>{
-      if(!canSpeak()) return;
-      speakWord(item.zh);
-    }, 400);
+    hoverTimer = setTimeout(()=>{ if(canSpeak()) speakWordSoft(item.zh); }, 400);
   });
-  el.addEventListener('pointerleave', ()=>{
-    clearTimeout(hoverTimer);
-  });
+  el.addEventListener('pointerleave', ()=> clearTimeout(hoverTimer));
 }
 
-/* ============ 圖片元件（找不到圖時自動退回文字） ============ */
+/* ============ 圖片（先找 webp，再找 png，都沒有就顯示文字） ============ */
 function makeItemVisual(item){
   const img = document.createElement('img');
-  img.src = item.img;
-  img.alt = item.zh;
+  const sources = [`images/圖片${item.id}.webp`, `images/圖片${item.id}.png`];
+  let idx = 0;
+  img.alt = hz(item);
+  img.dataset.itemId = item.id;
   img.draggable = false;
   img.onerror = function(){
-    // 圖片載入失敗時的備援：顯示文字，方便發現是哪一個檔名有問題
+    idx++;
+    if (idx < sources.length){ img.src = sources[idx]; return; }
     const fallback = document.createElement('div');
-    fallback.textContent = item.zh;
-    fallback.style.fontSize = '12px';
-    fallback.style.textAlign = 'center';
-    fallback.style.padding = '4px';
-    fallback.style.color = '#8C2F26';
+    fallback.className = 'item-fallback';
+    fallback.dataset.itemId = item.id;
+    fallback.textContent = hz(item);
     img.replaceWith(fallback);
   };
+  img.src = sources[0];
   return img;
 }
+function refreshAlts(){
+  document.querySelectorAll('img[data-item-id]').forEach(img => { img.alt = hz(POOL_BY_ID[img.dataset.itemId]); });
+  document.querySelectorAll('.item-fallback').forEach(el => { el.textContent = hz(POOL_BY_ID[el.dataset.itemId]); });
+}
 
-/* ============ 畫面渲染 ============ */
+/* ============ 畫面 ============ */
 function renderShelf(){
   shelfGrid.innerHTML = '';
   for(let i=0;i<9;i++){
     const cell = document.createElement('div');
     cell.className = 'shelf-cell';
     cell.dataset.cell = i;
-    if(state.filled[i]){
+    if(state && state.filled[i]){
       cell.classList.add('filled');
       cell.appendChild(makeItemVisual(state.answerKey[i]));
       attachHoverSpeak(cell, state.answerKey[i]);
     }
+    cell.addEventListener('click', () => onCellTap(i));
     shelfGrid.appendChild(cell);
   }
 }
@@ -681,43 +924,39 @@ function renderTray(){
     tile.appendChild(makeItemVisual(item));
     tile.setAttribute('aria-label', item.zh);
     attachHoverSpeak(tile, item);
-    if(state.filled_item_ids && state.filled_item_ids.has(item.id)){
-      tile.classList.add('placeholder');
-    }
+    if(state.placedIds.has(item.id)) tile.classList.add('placeholder');
+    if(state.selectedId === item.id) tile.classList.add('selected');
     attachDrag(tile);
     tray.appendChild(tile);
   });
 }
 
+function setSelected(id){
+  state.selectedId = id;
+  tray.querySelectorAll('.item-tile').forEach(el => el.classList.toggle('selected', Number(el.dataset.itemId) === id));
+  document.body.classList.toggle('has-selection', id != null);
+}
+
 function updateErrDisplay(){ errNum.textContent = state.errors; }
 
+function fmt(sec){
+  return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+}
 function startTimer(){
   state.startTime = Date.now();
+  const thisGame = gameId;
   state.timerInterval = setInterval(()=>{
-    const elapsed = Math.floor((Date.now()-state.startTime)/1000);
-    const m = String(Math.floor(elapsed/60)).padStart(2,'0');
-    const s = String(elapsed%60).padStart(2,'0');
-    timerNum.textContent = `${m}:${s}`;
+    if (thisGame !== gameId) return;
+    timerNum.textContent = fmt(Math.floor((Date.now()-state.startTime)/1000));
   }, 250);
 }
-function stopTimer(){
-  clearInterval(state.timerInterval);
-}
-function elapsedString(){
-  const elapsed = Math.floor((Date.now()-state.startTime)/1000);
-  const m = String(Math.floor(elapsed/60)).padStart(2,'0');
-  const s = String(elapsed%60).padStart(2,'0');
-  return `${m}:${s}`;
-}
 
-/* ============ 出題邏輯 ============ */
-// 回傳 {trad, simp, py} 三種版本：trad 供語音朗讀；simp/py 供「顯示指令文字」使用
+/* ============ 出題 ============ */
 function buildInstruction(cellI){
   const item = state.answerKey[cellI];
   state.currentTargetCell = cellI;
   state.currentTargetItem = item;
 
-  // 找出「已完成、且與目標格正交相鄰」的鄰居格
   const neighborCandidates = [];
   Object.keys(state.filled).forEach(fi=>{
     fi = Number(fi);
@@ -725,89 +964,80 @@ function buildInstruction(cellI){
     if(dir) neighborCandidates.push({cell:fi, dir});
   });
 
-  let trad, simp, py;
   if(neighborCandidates.length > 0 && Math.random() < 0.6){
     const pick = neighborCandidates[Math.floor(Math.random()*neighborCandidates.length)];
-    const neighborItem = state.answerKey[pick.cell];
-    const dirMeta = REL_DIR[pick.dir];
-    trad = `${CONN.ba.t}${item.zh}${CONN.fangzai.t}${neighborItem.zh}${CONN.de.t}${dirMeta.t}。`;
-    simp = `${CONN.ba.s}${item.zhs}${CONN.fangzai.s}${neighborItem.zhs}${CONN.de.s}${dirMeta.s}。`;
-    py   = `${CONN.ba.py} ${item.py} ${CONN.fangzai.py} ${neighborItem.py} ${CONN.de.py} ${dirMeta.py}。`;
-  } else {
-    const label = ABS_LABEL[cellI];
-    trad = `${CONN.ba.t}${item.zh}${CONN.fangdao.t}${CONN.guizi.t}${CONN.de.t}${label.t}。`;
-    simp = `${CONN.ba.s}${item.zhs}${CONN.fangdao.s}${CONN.guizi.s}${CONN.de.s}${label.s}。`;
-    py   = `${CONN.ba.py} ${item.py} ${CONN.fangdao.py} ${CONN.guizi.py} ${CONN.de.py} ${label.py}。`;
+    return { type: 'relative', tokens: [CONN.ba, item, CONN.fangzai, state.answerKey[pick.cell], CONN.de, REL_DIR[pick.dir]] };
   }
-  return {trad, simp, py};
+  return { type: 'absolute', tokens: [CONN.ba, item, CONN.fangdao, CONN.guizi, CONN.de, ABS_LABEL[cellI]] };
 }
+function speechText(tokens){ return tokens.map(x => x.t).join('') + '。'; }
 
 function renderInstructionDisplay(){
-  if(textToggle.checked && state && state.currentSentence){
-    const sen = state.currentSentence;
-    let html = `<div class="cn-line trad">${sen.trad}</div>`;
-    if(sen.simp !== sen.trad){
-      html += `<div class="cn-line simp">${sen.simp}</div>`;
-    }
-    html += `<div class="py-line">${sen.py}</div>`;
+  if (!state){
+    instructionText.textContent = t('intro');
+    return;
+  }
+  if (state.finished){
+    instructionText.textContent = t('done');
+    return;
+  }
+  if (textToggle.checked && state.currentTokens){
+    const toks = state.currentTokens;
+    let html = `<div class="cn-line">${toks.map(hz).join('')}。</div>`;
+    if (settings.phon === 'pinyin' || settings.phon === 'both') html += `<div class="py-line">${toks.map(x=>x.py).join(' ')}。</div>`;
+    if (settings.phon === 'zhuyin' || settings.phon === 'both') html += `<div class="zy-line">${toks.map(x=>x.zy).join('　')}。</div>`;
     instructionText.innerHTML = html;
-  } else if(state && !state.finished){
-    instructionText.textContent = '(Escucha con atención la instrucción de voz…)';
+  } else {
+    instructionText.textContent = t('listen');
   }
 }
 
 function askCurrentStep(){
   const cellI = state.instructionOrder[state.step];
-  const sentence = buildInstruction(cellI);
-  state.currentSentence = sentence;
+  const ins = buildInstruction(cellI);
+  state.currentTokens = ins.tokens;
+  state.currentType = ins.type;
+  state.locked = false;
   renderInstructionDisplay();
   feedbackEl.textContent = '';
   feedbackEl.className = 'feedback';
   replayBtn.disabled = false;
-  speak(sentence.trad);
+  speak(speechText(ins.tokens));
 }
 
 function replayCurrent(){
-  if(!state || state.finished) return;
-  if(state.currentSentence){
-    speak(state.currentSentence.trad);
-    track('replay_used', { target_item: state.currentTargetItem ? state.currentTargetItem.zh : '' });
-  }
+  if(!state || state.finished || !state.currentTokens) return;
+  speak(speechText(state.currentTokens));
+  track('replay_used', { target_item: state.currentTargetItem ? state.currentTargetItem.zh : '' });
 }
 
-/* ============ 判定與流程推進 ============ */
+/* ============ 判定 ============ */
 function handleDrop(itemId, cellI){
-  if(!state || state.finished) return;
+  if(!state || state.finished || state.locked) return;
+  if(state.filled[cellI]) return;   // 已經放了東西的格子，不算錯
   const cellEl = shelfGrid.querySelector(`[data-cell="${cellI}"]`);
-
-  if(state.filled[cellI]){
-    // 格子已被佔用，視為無效放置，不計入錯誤
-    return;
-  }
-
   const targetItem = state.currentTargetItem;
-  const targetCell = state.currentTargetCell;
-
   const itemCorrect = (Number(itemId) === targetItem.id);
-  const cellCorrect  = (cellI === targetCell);
+  const cellCorrect = (cellI === state.currentTargetCell);
 
   if(itemCorrect && cellCorrect){
-    // 成功
     state.filled[cellI] = true;
-    if(!state.filled_item_ids) state.filled_item_ids = new Set();
-    state.filled_item_ids.add(itemId);
-    feedbackEl.textContent = '✔ ¡Correcto!';
+    state.placedIds.add(Number(itemId));
+    state.selectedId = null;
+    document.body.classList.remove('has-selection');
+    feedbackEl.textContent = t('ok');
     feedbackEl.className = 'feedback ok';
     renderShelf();
     renderTray();
     state.step++;
+    state.locked = true;
+    const thisGame = gameId;
     if(state.step >= 9){
       finishGame();
     } else {
-      setTimeout(askCurrentStep, 500);
+      setTimeout(() => { if (thisGame === gameId) askCurrentStep(); }, 500);
     }
   } else {
-    // 失敗
     state.errors++;
     updateErrDisplay();
     if(cellEl){
@@ -815,175 +1045,335 @@ function handleDrop(itemId, cellI){
       setTimeout(()=>cellEl.classList.remove('shake'), 400);
     }
     if(!itemCorrect){
-      feedbackEl.textContent = '✘ ¡Objeto equivocado!';
+      feedbackEl.textContent = t('wrongItem');
       track('error_wrong_item', {
         target_item: targetItem.zh,
-        picked_item: (POOL.find(p=>p.id===Number(itemId))||{}).zh || '',
-        sentence_type: state.currentSentence && state.currentSentence.trad.includes(CONN.fangzai.t) ? 'relative' : 'absolute'
+        picked_item: (POOL_BY_ID[Number(itemId)] || {}).zh || '',
+        sentence_type: state.currentType
       });
     } else {
-      feedbackEl.textContent = '✘ ¡Posición equivocada!';
-      track('error_wrong_position', {
-        target_item: targetItem.zh,
-        sentence_type: state.currentSentence && state.currentSentence.trad.includes(CONN.fangzai.t) ? 'relative' : 'absolute'
-      });
+      feedbackEl.textContent = t('wrongPos');
+      track('error_wrong_position', { target_item: targetItem.zh, sentence_type: state.currentType });
     }
     feedbackEl.className = 'feedback err';
+    const thisGame = gameId;
     setTimeout(()=>{
-      if(state.currentSentence) speak(state.currentSentence.trad);
+      if(thisGame === gameId && state.currentTokens && !state.finished) speak(speechText(state.currentTokens));
     }, 600);
   }
 }
 
-function finishGame(){
-  state.finished = true;
-  stopTimer();
-  instructionText.textContent = '¡Genial! Ya has ordenado todo.';
-  feedbackEl.textContent = '';
-  replayBtn.disabled = true;
-  speak('太棒了，全部都收好了！');
-  const elapsedSec = Math.floor((Date.now()-state.startTime)/1000);
-  finalTime.textContent = elapsedString();
-  finalErrors.textContent = state.errors;
-  endOverlay.classList.add('show');
-  track('game_complete', {
-    time_seconds: elapsedSec,
-    error_count: state.errors
-  });
+/* ============ 點選：點物品 → 點格子 ============ */
+function onTileTap(itemId){
+  if(!state || state.finished || state.placedIds.has(itemId)) return;
+  if(state.selectedId === itemId){
+    setSelected(null);
+    return;
+  }
+  setSelected(itemId);
+  speak(POOL_BY_ID[itemId].zh);   // 點一下就念出物品名稱
+}
+function onCellTap(cellI){
+  if(!state || state.finished || state.selectedId == null) return;
+  if(state.filled[cellI]) return;
+  // 放錯時保留選取，方便直接再點別的格子
+  handleDrop(state.selectedId, cellI);
 }
 
-/* ============ 拖曳（滑鼠 + 觸控 統一用 Pointer Events） ============ */
+/* ============ 拖曳（移動超過一點點才算拖曳，否則當作點一下） ============ */
 let dragCtx = null;
+const DRAG_THRESHOLD = 8;
 
 function attachDrag(tile){
   tile.addEventListener('pointerdown', (e)=>{
-    if(state.finished) return;
+    if(!state || state.finished) return;
     if(tile.classList.contains('placeholder')) return;
     e.preventDefault();
     const rect = tile.getBoundingClientRect();
     dragCtx = {
       tile,
       itemId: Number(tile.dataset.itemId),
+      startX: e.clientX, startY: e.clientY,
       offsetX: e.clientX - rect.left,
       offsetY: e.clientY - rect.top,
-      width: rect.width,
-      height: rect.height,
-      originParent: tile.parentNode,
-      originNext: tile.nextSibling
+      rect,
+      dragging: false
     };
-    tile.setPointerCapture(e.pointerId);
-    tile.classList.add('dragging');
-    tile.style.width = rect.width+'px';
-    tile.style.height = rect.height+'px';
-    tile.style.left = rect.left+'px';
-    tile.style.top = rect.top+'px';
-    // 不搬移 DOM 位置：position:fixed 已可讓物品浮在最上層，
-    // 若中途把元素移出原本父層，部分行動裝置會遺失 pointer capture，導致移動/放開事件收不到。
+    try { tile.setPointerCapture(e.pointerId); } catch(err){}
   });
 
   tile.addEventListener('pointermove', (e)=>{
     if(!dragCtx || dragCtx.tile!==tile) return;
+    if(!dragCtx.dragging){
+      if (Math.hypot(e.clientX - dragCtx.startX, e.clientY - dragCtx.startY) < DRAG_THRESHOLD) return;
+      dragCtx.dragging = true;
+      tile.classList.add('dragging');
+      tile.style.width = dragCtx.rect.width+'px';
+      tile.style.height = dragCtx.rect.height+'px';
+    }
     tile.style.left = (e.clientX - dragCtx.offsetX)+'px';
     tile.style.top  = (e.clientY - dragCtx.offsetY)+'px';
-
-    // 高亮懸停中的櫃子格
     document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
-    tile.style.visibility = 'hidden';
     const under = document.elementFromPoint(e.clientX, e.clientY);
-    tile.style.visibility = 'visible';
     const cell = under ? under.closest('.shelf-cell') : null;
-    if(cell && !cell.classList.contains('filled')){
-      cell.classList.add('hover-ok');
-    }
+    if(cell && !cell.classList.contains('filled')) cell.classList.add('hover-ok');
   });
 
   tile.addEventListener('pointerup', (e)=>{
     if(!dragCtx || dragCtx.tile!==tile) return;
-    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
-
-    tile.style.visibility = 'hidden';
-    const under = document.elementFromPoint(e.clientX, e.clientY);
-    tile.style.visibility = 'visible';
-    const cellEl = under ? under.closest('.shelf-cell') : null;
-
-    // 還原樣式
-    tile.classList.remove('dragging');
-    tile.style.position = '';
-    tile.style.left = '';
-    tile.style.top = '';
-    tile.style.width = '';
-    tile.style.height = '';
-    if(dragCtx.originNext){
-      dragCtx.originParent.insertBefore(tile, dragCtx.originNext);
-    } else {
-      dragCtx.originParent.appendChild(tile);
-    }
-
-    const itemId = dragCtx.itemId;
+    const ctx = dragCtx;
     dragCtx = null;
-
-    if(cellEl){
-      const cellI = Number(cellEl.dataset.cell);
-      handleDrop(itemId, cellI);
+    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
+    if(!ctx.dragging){
+      onTileTap(ctx.itemId);
+      return;
     }
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const cellEl = under ? under.closest('.shelf-cell') : null;
+    resetTile(tile);
+    if(cellEl) handleDrop(ctx.itemId, Number(cellEl.dataset.cell));
   });
 
   tile.addEventListener('pointercancel', ()=>{
     if(!dragCtx || dragCtx.tile!==tile) return;
-    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
-    tile.classList.remove('dragging');
-    tile.style.position = '';
-    tile.style.left = '';
-    tile.style.top = '';
-    tile.style.width = '';
-    tile.style.height = '';
-    tile.style.visibility = '';
     dragCtx = null;
+    document.querySelectorAll('.shelf-cell').forEach(c=>c.classList.remove('hover-ok'));
+    resetTile(tile);
+  });
+}
+function resetTile(tile){
+  tile.classList.remove('dragging');
+  ['left','top','width','height'].forEach(p => tile.style[p] = '');
+}
+
+/* ============ 結束與排行榜存檔 ============ */
+let lastResult = null;
+
+function finishGame(){
+  state.finished = true;
+  clearInterval(state.timerInterval);
+  feedbackEl.textContent = '';
+  replayBtn.disabled = true;
+  updateStartBtn();
+  renderInstructionDisplay();
+  speak(DONE_SPEECH);
+  const secs = Math.floor((Date.now()-state.startTime)/1000);
+  lastResult = { secs, errors: state.errors, textAid: state.textAid, status: '' , saved: false };
+  try { $('nameInput').value = localStorage.getItem('ordena_name') || ''; } catch(e){}
+  renderEndCard();
+  endOverlay.classList.add('show');
+  track('game_complete', {
+    time_seconds: secs,
+    error_count: state.errors,
+    script: settings.script, lang: settings.lang, phon: settings.phon,
+    text_aid: state.textAid
   });
 }
 
-/* ============ 遊戲開始 / 重新開始 ============ */
+function renderEndCard(){
+  if (!lastResult) return;
+  $('finalTime').textContent = fmt(lastResult.secs);
+  $('finalErrors').textContent = lastResult.errors;
+  $('textAidNote').style.display = lastResult.textAid ? 'block' : 'none';
+  const st = lastResult.status;
+  $('saveStatus').textContent = typeof st === 'function' ? st() : (st ? t(st) : '');
+  $('saveBtn').disabled = lastResult.saved || lastResult.saving;
+}
+
+/* ---- Firebase ---- */
+const firebaseConfig = {
+  apiKey: "AIzaSyC_YSDn2OH6_GKKwCq0d8QFNl3fYXzTC60",
+  authDomain: "memorma-24dab.firebaseapp.com",
+  projectId: "memorma-24dab",
+  storageBucket: "memorma-24dab.firebasestorage.app",
+  messagingSenderId: "806709458465",
+  appId: "1:806709458465:web:f0d12acb2f911f2f165560"
+};
+const LB_COLLECTION = 'ordena_leaderboard';
+let db = null, authReady = Promise.resolve(null);
+try {
+  if (window.firebase){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    authReady = firebase.auth().signInAnonymously()
+      .then(c => c.user.uid)
+      .catch(err => { console.error('Anonymous sign-in failed:', err); return null; });
+  }
+} catch(e){ console.warn('Firebase not available:', e); }
+
+// 排名：錯誤越少越前面，錯誤一樣比時間
+function rankOf(errors, secs){ return (999 - errors) * 100000 + (99999 - secs); }
+
+async function saveToRanking(){
+  if (!lastResult || lastResult.saved || lastResult.saving) return;
+  const name = $('nameInput').value.trim().slice(0, 14);
+  if (!name){ lastResult.status = 'nameErr'; renderEndCard(); return; }
+  try { localStorage.setItem('ordena_name', name); } catch(e){}
+  lastResult.saving = true; lastResult.status = 'saving'; renderEndCard();
+
+  const errors = Math.min(999, lastResult.errors);
+  const secs = Math.max(10, Math.min(99999, lastResult.secs));
+  const rank = rankOf(errors, secs);
+  try {
+    const uid = await authReady;
+    if (!db || !uid) throw new Error('no firebase');
+    const ref = db.collection(LB_COLLECTION).doc(uid);
+    const snap = await ref.get();
+    if (snap.exists && (snap.data().rank || 0) >= rank){
+      const old = snap.data();
+      lastResult.saved = true;
+      lastResult.status = () => t('notBetter')(old.errors, fmt(old.secs));
+    } else {
+      await ref.set({
+        name, errors, secs, rank,
+        textAid: !!lastResult.textAid,
+        script: settings.script,
+        lang: settings.lang,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      lastResult.saved = true;
+      lastResult.status = 'saved';
+      track('leaderboard_submit', { error_count: errors, time_seconds: secs, text_aid: !!lastResult.textAid });
+    }
+  } catch(err){
+    console.error(err);
+    lastResult.status = 'saveFail';
+  }
+  lastResult.saving = false;
+  renderEndCard();
+}
+$('saveBtn').addEventListener('click', saveToRanking);
+$('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveToRanking(); });
+
+let lbReq = 0;
+async function loadRanking(){
+  const req = ++lbReq;
+  const msg = $('lbMsg'), list = $('lbList');
+  msg.textContent = t('loading'); msg.style.display = 'block';
+  list.innerHTML = '';
+  if (!db){ msg.textContent = t('lbFail'); return; }
+  try {
+    const snap = await db.collection(LB_COLLECTION).orderBy('rank', 'desc').limit(10).get();
+    if (req !== lbReq) return;
+    let myUid = null;
+    try { myUid = firebase.auth().currentUser && firebase.auth().currentUser.uid; } catch(e){}
+    if (snap.empty){ msg.textContent = t('lbEmpty'); return; }
+    msg.style.display = 'none';
+    let rk = 1;
+    snap.forEach(doc => {
+      const d = doc.data();
+      const li = document.createElement('li');
+      if (doc.id === myUid) li.classList.add('me');
+      li.innerHTML = '<span class="rk"></span><span class="nm"></span><span class="res"></span>';
+      li.querySelector('.rk').textContent = rk++;
+      const nm = li.querySelector('.nm');
+      nm.textContent = String(d.name ?? '');   // 名字一律當純文字
+      if (d.textAid){
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = t('withText');
+        nm.appendChild(tag);
+      }
+      li.querySelector('.res').textContent = `${Number(d.errors) || 0} ${t('errUnit')} · ${fmt(Number(d.secs) || 0)}`;
+      list.appendChild(li);
+    });
+  } catch(err){
+    if (req !== lbReq) return;
+    console.error(err);
+    msg.textContent = t('lbFail');
+  }
+}
+function openRanking(){
+  $('rankOverlay').classList.add('show');
+  loadRanking();
+  track('leaderboard_view');
+}
+$('rankBtn').addEventListener('click', openRanking);
+$('endRankBtn').addEventListener('click', openRanking);
+$('rankClose').addEventListener('click', () => $('rankOverlay').classList.remove('show'));
+
+/* ============ 設定視窗 ============ */
+const SETTING_DEFS = [
+  { key: 'script', label: 'setScript', options: [['trad', () => '繁體'], ['simp', () => '简体']] },
+  { key: 'lang',   label: 'setLang',   options: [['es', () => 'Español'], ['en', () => 'English']] },
+  { key: 'phon',   label: 'setPhon',   options: [['none', () => t('phonNone')], ['pinyin', () => 'Pinyin'], ['zhuyin', () => 'ㄅㄆㄇ'], ['both', () => t('phonBoth')]] }
+];
+function renderSettings(){
+  const body = $('settingsBody');
+  body.innerHTML = '';
+  SETTING_DEFS.forEach(def => {
+    const g = document.createElement('div');
+    g.className = 'setting-group';
+    const lb = document.createElement('div');
+    lb.className = 'setting-label';
+    lb.textContent = t(def.label);
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    def.options.forEach(([val, txt]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = txt();
+      if (settings[def.key] === val) b.classList.add('active');
+      b.addEventListener('click', () => {
+        if (settings[def.key] === val) return;
+        settings[def.key] = val;
+        saveSettings();
+        applyAll();
+      });
+      seg.appendChild(b);
+    });
+    g.append(lb, seg);
+    body.appendChild(g);
+  });
+}
+$('settingsBtn').addEventListener('click', () => $('settingsOverlay').classList.add('show'));
+$('settingsClose').addEventListener('click', () => $('settingsOverlay').classList.remove('show'));
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => {
+    if (e.target === ov && ov.id !== 'endOverlay') ov.classList.remove('show');
+  });
+});
+
+/* ============ 開始／重新開始 ============ */
 function startGame(){
+  if (state && !state.finished && !confirm(t('confirmRestart'))) return;
+  gameId++;
+  if (state) clearInterval(state.timerInterval);
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   newGame();
+  lastResult = null;
+  document.body.classList.remove('has-selection');
   renderShelf();
   renderTray();
   updateErrDisplay();
   timerNum.textContent = '00:00';
   endOverlay.classList.remove('show');
-  startBtn.disabled = true;
+  updateStartBtn();
   startTimer();
   askCurrentStep();
-  track('game_start');
+  track('game_start', { script: settings.script, lang: settings.lang, phon: settings.phon });
 }
 
 startBtn.addEventListener('click', startGame);
 replayBtn.addEventListener('click', replayCurrent);
-restartBtn.addEventListener('click', startGame);
+$('restartBtn').addEventListener('click', () => { endOverlay.classList.remove('show'); startGame(); });
 textToggle.addEventListener('change', ()=>{
-  renderInstructionDisplay();
-  if(textToggle.checked){
+  if (textToggle.checked){
+    if (state && !state.finished) state.textAid = true;
     track('hint_text_shown');
   }
+  renderInstructionDisplay();
 });
 speedSelect.addEventListener('change', ()=>{
-  if(state && !state.finished && state.currentSentence){
-    speak(state.currentSentence.trad);
-  }
+  if(state && !state.finished && state.currentTokens) speak(speechText(state.currentTokens));
 });
 hoverSpeakToggle.addEventListener('change', ()=>{
-  if(hoverSpeakToggle.checked){
-    track('hover_speak_enabled');
-  }
+  if(hoverSpeakToggle.checked) track('hover_speak_enabled');
 });
 
-/* 初始畫面：先畫出空櫃子預覽 */
-(function initPreview(){
-  for(let i=0;i<9;i++){
-    const cell = document.createElement('div');
-    cell.className = 'shelf-cell';
-    shelfGrid.appendChild(cell);
-  }
-})();
+/* 初始畫面 */
+renderShelf();
+applyAll();
 
 })();
 </script>
