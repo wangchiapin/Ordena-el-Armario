@@ -463,9 +463,9 @@
       <button class="btn-primary" id="startBtn"></button>
       <button class="btn-secondary" id="replayBtn" disabled data-i18n="replay"></button>
       <select id="speedSelect" class="speed-select">
-        <option value="0.5" data-i18n="slow"></option>
-        <option value="0.92" selected data-i18n="normal"></option>
-        <option value="1.15" data-i18n="fast"></option>
+        <option value="slow" data-i18n="slow"></option>
+        <option value="normal" selected data-i18n="normal"></option>
+        <option value="fast" data-i18n="fast"></option>
       </select>
     </div>
     <div class="toggle-row">
@@ -662,8 +662,8 @@ const UI = {
     ranking: '🏆 Ranking', loading: 'Cargando…', lbEmpty: '¡Todavía nadie está en el ranking. Sé el primero!',
     lbFail: 'No se pudo cargar el ranking', errUnit: 'errores', withText: 'con texto',
     settingsTitle: '⚙️ Ajustes', close: 'Cerrar',
-    setScript: 'Caracteres', setLang: 'Idioma', setPhon: 'Pronunciación',
-    phonNone: 'Nada', phonBoth: 'Ambos',
+    setScript: 'Caracteres', setLang: 'Idioma', setPhon: 'Pronunciación', setRate: 'Velocidad de voz',
+    phonNone: 'Nada', phonBoth: 'Ambos', zhOnly: 'Solo chino',
     noVoiceShort: '🔇 Tu dispositivo no tiene voz en chino; mostramos el texto de la instrucción.',
     noVoice: '🔇 Tu dispositivo no tiene voz en chino, por eso no se escucha la instrucción. Activamos el texto para que puedas jugar. Puedes instalar una voz de chino (Taiwán) en los ajustes de idioma o de voz de tu sistema.'
   },
@@ -690,23 +690,73 @@ const UI = {
     ranking: '🏆 Ranking', loading: 'Loading…', lbEmpty: 'No one is in the ranking yet. Be the first!',
     lbFail: 'Could not load the ranking', errUnit: 'errors', withText: 'with text',
     settingsTitle: '⚙️ Settings', close: 'Close',
-    setScript: 'Characters', setLang: 'Language', setPhon: 'Pronunciation',
-    phonNone: 'None', phonBoth: 'Both',
+    setScript: 'Characters', setLang: 'Language', setPhon: 'Pronunciation', setRate: 'Voice speed',
+    phonNone: 'None', phonBoth: 'Both', zhOnly: 'Chinese only',
     noVoiceShort: '🔇 No Chinese voice on this device; the instruction text is shown instead.',
     noVoice: "🔇 Your device has no Chinese voice, so you can't hear the instructions. We turned on the text so you can still play. You can install a Chinese (Taiwan) voice in your system's language or speech settings."
+  }
+  ,zh: {
+    subtitle: '每天一分鐘 · 中文聽力練習：位置',
+    time: '時間', errors: '錯誤',
+    intro: '按「開始」，聽語音指示，把櫃子整理好。',
+    listen: '（請仔細聽語音指示…）',
+    start: '開始', restart: '重新開始',
+    confirmRestart: '要重新開始嗎？目前的進度會消失。',
+    replay: '🔁 再聽一次',
+    slow: '🐢 慢', normal: '🚶 正常', fast: '🐇 快',
+    showText: '顯示指示文字（給初學者的幫助）',
+    hoverSpeak: '滑鼠移到物品上時唸出名稱',
+    trayLabel: '點一個物品，再點櫃子的一格（或直接拖曳）',
+    legendTitle: '方位詞', legendShow: '📋 看方位詞', legendHide: '📋 隱藏方位詞',
+    ok: '✔ 答對了！', wrongItem: '✘ 物品錯了！', wrongPos: '✘ 位置錯了！',
+    done: '太棒了！全部都收好了。',
+    endTitle: '完成！', timeUsed: '花費時間', playAgain: '再玩一次',
+    namePh: '輸入你的名字', save: '存進排行榜', nameErr: '請輸入名字才能儲存。',
+    saving: '儲存中…', saved: '已存進排行榜！', saveFail: '儲存失敗，請再試一次。',
+    notBetter: (e, tm) => `你的最佳成績仍然是：${e} 個錯誤 · ${tm}`,
+    textAidNote: '你是在顯示文字的情況下玩的：成績會標示「有文字」。',
+    ranking: '🏆 排行榜', loading: '載入中…', lbEmpty: '排行榜還沒有人，快來當第一名！',
+    lbFail: '無法載入排行榜', errUnit: '個錯誤', withText: '有文字',
+    settingsTitle: '⚙️ 設定', close: '關閉',
+    setScript: '字體', setLang: '語言', setPhon: '拼音／注音', setRate: '語速',
+    phonNone: '關閉', phonBoth: '兩者', zhOnly: '只有中文',
+    noVoiceShort: '🔇 這個裝置沒有中文語音，改為顯示指示文字。',
+    noVoice: '🔇 你的裝置沒有中文語音，所以聽不到指示。我們已經打開文字，讓你仍然可以玩。可以到系統的語言或語音設定安裝中文（台灣）語音。'
   }
 };
 
 /* ============ 設定（記在玩家瀏覽器） ============ */
-const SETTINGS_KEY = 'ordena_settings';
-const settings = { script: 'trad', lang: 'es', phon: 'pinyin' };
-try {
-  const sv = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-  if (sv.script === 'trad' || sv.script === 'simp') settings.script = sv.script;
-  if (sv.lang === 'es' || sv.lang === 'en') settings.lang = sv.lang;
-  if (['none','pinyin','zhuyin','both'].includes(sv.phon)) settings.phon = sv.phon;
-} catch(e){}
-function saveSettings(){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){} }
+// 共用設定：和小狗找寶藏等遊戲同一份（hanziGames.settings）
+const SETTINGS_KEY = 'hanziGames.settings';
+const OLD_SETTINGS_KEY = 'ordena_settings';
+const SET_OPTS = { script:['trad','simp'], lang:['es','en','zh'], phon:['pinyin','zhuyin','both','off'], rate:['slow','normal','fast'] };
+const RATE_VALUE = { slow:0.45, normal:0.65, fast:0.85 };
+const settings = { script: 'trad', lang: 'es', phon: 'pinyin', rate: 'normal' };
+function readSettings(){
+  let saved = null, old = null;
+  try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch(e){}
+  if (saved && typeof saved === 'object'){
+    Object.keys(SET_OPTS).forEach(k => { if (SET_OPTS[k].includes(saved[k])) settings[k] = saved[k]; });
+    return false;
+  }
+  try { old = JSON.parse(localStorage.getItem(OLD_SETTINGS_KEY) || 'null'); } catch(e){}
+  if (old && typeof old === 'object'){
+    if (old.script === 'simp') settings.script = 'simp';
+    if (old.lang === 'en') settings.lang = 'en';
+    if (['pinyin','zhuyin','both'].includes(old.phon)) settings.phon = old.phon;
+    if (old.phon === 'none') settings.phon = 'off';
+  }
+  return true;
+}
+function saveSettings(){
+  try {
+    let cur = {};
+    try { cur = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {}; } catch(e){}
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(Object.assign(cur, { v:1, script:settings.script, lang:settings.lang, phon:settings.phon, rate:settings.rate })));
+  } catch(e){}
+}
+if (readSettings()) saveSettings();
+const ONLYZH = () => settings.lang === 'zh';
 function t(k){ return UI[settings.lang][k]; }
 function hz(tok){ return settings.script === 'trad' ? tok.t : tok.s; }
 
@@ -765,7 +815,8 @@ function newGame(){
 
 /* ============ 套用語言／字體到畫面 ============ */
 function applyAll(){
-  document.documentElement.lang = settings.lang;
+  document.documentElement.lang = settings.script === 'simp' ? 'zh-Hans' : 'zh-Hant';
+  speedSelect.value = settings.rate;
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const v = t(el.dataset.i18n);
     if (typeof v === 'string') el.textContent = v;
@@ -844,7 +895,7 @@ function speak(text, onend){
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-TW';
   if(zhVoice) utter.voice = zhVoice;
-  utter.rate = parseFloat(speedSelect.value) || 0.92;
+  utter.rate = RATE_VALUE[settings.rate];
   utter.onstart = ()=> speakerIcon.classList.add('speaking');
   utter.onend = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
   utter.onerror = ()=>{ speakerIcon.classList.remove('speaking'); if(onend) onend(); };
@@ -857,7 +908,7 @@ function speakWordSoft(text){
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-TW';
   if(zhVoice) utter.voice = zhVoice;
-  utter.rate = parseFloat(speedSelect.value) || 0.92;
+  utter.rate = RATE_VALUE[settings.rate];
   speechSynthesis.speak(utter);
 }
 
@@ -1295,8 +1346,9 @@ $('rankClose').addEventListener('click', () => $('rankOverlay').classList.remove
 /* ============ 設定視窗 ============ */
 const SETTING_DEFS = [
   { key: 'script', label: 'setScript', options: [['trad', () => '繁體'], ['simp', () => '简体']] },
-  { key: 'lang',   label: 'setLang',   options: [['es', () => 'Español'], ['en', () => 'English']] },
-  { key: 'phon',   label: 'setPhon',   options: [['none', () => t('phonNone')], ['pinyin', () => 'Pinyin'], ['zhuyin', () => 'ㄅㄆㄇ'], ['both', () => t('phonBoth')]] }
+  { key: 'lang',   label: 'setLang',   options: [['es', () => '中文＋Español'], ['en', () => '中文＋English'], ['zh', () => UI.zh.zhOnly]] },
+  { key: 'phon',   label: 'setPhon',   options: [['pinyin', () => 'Pinyin'], ['zhuyin', () => 'ㄅㄆㄇ'], ['both', () => t('phonBoth')], ['off', () => t('phonNone')]] },
+  { key: 'rate',   label: 'setRate',   options: [['slow', () => t('slow')], ['normal', () => t('normal')], ['fast', () => t('fast')]] }
 ];
 function renderSettings(){
   const body = $('settingsBody');
@@ -1319,6 +1371,7 @@ function renderSettings(){
         settings[def.key] = val;
         saveSettings();
         applyAll();
+        if (def.key === 'rate') speak('把鑰匙放到櫃子左邊');   // 改語速時試聽一下
       });
       seg.appendChild(b);
     });
@@ -1365,10 +1418,17 @@ textToggle.addEventListener('change', ()=>{
   renderInstructionDisplay();
 });
 speedSelect.addEventListener('change', ()=>{
+  if (SET_OPTS.rate.includes(speedSelect.value)){ settings.rate = speedSelect.value; saveSettings(); renderSettings(); }
   if(state && !state.finished && state.currentTokens) speak(speechText(state.currentTokens));
 });
 hoverSpeakToggle.addEventListener('change', ()=>{
   if(hoverSpeakToggle.checked) track('hover_speak_enabled');
+});
+
+// 別的分頁（其他遊戲）改了共用設定 → 這裡跟著更新
+window.addEventListener('storage', e => {
+  if (e.key !== SETTINGS_KEY) return;
+  readSettings(); applyAll(); renderSettings();
 });
 
 /* 初始畫面 */
