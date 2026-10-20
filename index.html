@@ -931,7 +931,7 @@ function pickVoice(){
   if (!('speechSynthesis' in window)) return;
   const voices = speechSynthesis.getVoices();
   zhVoice = voices.find(v=>/zh[-_]TW/i.test(v.lang)) ||
-            voices.find(v=>v.lang && (v.lang.toLowerCase().startsWith('zh') || /cmn/i.test(v.lang))) ||
+            voices.find(v=>v.lang && (v.lang.toLowerCase().startsWith('zh') || /cmn/i.test(v.lang)) && !/^(yue|zh[-_]hk)/i.test(v.lang)) ||   /* 排除廣東話 */
             null;
   if (zhVoice){ $('voiceHint').classList.remove('show'); document.body.classList.remove('hint-on'); }
 }
