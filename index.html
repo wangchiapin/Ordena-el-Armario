@@ -420,6 +420,56 @@
     .legend .legend-grid{display:none;margin-top:6px;}
     .legend.open .legend-grid{display:grid;}
   }
+
+  /* ================= 電腦版：放大＋兩欄對齊（左：指令+物品；右：櫃子+方位詞） ================= */
+  .col-left,.col-right{display:contents;}
+  @media (min-width: 1000px){
+    body{padding:28px 32px;}
+    .brand,.stage{max-width:1280px;}
+    .brand{margin:6px 0 22px;gap:14px;}
+    .seal{width:54px;height:54px;font-size:30px;border-radius:8px;}
+    .brand h1{font-size:30px;}
+    .brand p{font-size:15px;}
+    .icon-btn{width:52px;height:52px;font-size:24px;border-radius:12px;}
+    .stage{grid-template-columns:1.1fr .9fr;grid-template-areas:none;grid-template-rows:none;gap:28px;align-items:stretch;}
+    .col-left,.col-right{display:flex;flex-direction:column;gap:20px;min-width:0;}
+    .instr-panel,.tray-panel,.cabinet-wrap,.legend{grid-area:auto;}
+    .tray-panel{flex:1;}
+    .tray{flex:1;align-content:center;}
+    .panel{padding:22px;border-radius:18px;}
+    .status-row{gap:14px;margin-bottom:14px;}
+    .status-chip{padding:10px 14px;border-radius:12px;}
+    .status-chip .num{font-size:30px;}
+    .status-chip .lbl{font-size:14px;}
+    .instruction-card{min-height:110px;padding:18px;gap:8px;border-radius:14px;}
+    .speaker{width:42px;height:42px;font-size:20px;}
+    .instruction-text{font-size:20px;}
+    .instruction-text .cn-line{font-size:22px;}
+    .instruction-text .py-line,.instruction-text .zy-line{font-size:16px;}
+    .feedback{font-size:17px;min-height:22px;}
+    .controls-row{gap:12px;margin-top:14px;}
+    button{padding:11px 20px;font-size:17px;border-radius:10px;}
+    .speed-select{padding:10px 12px;font-size:17px;border-radius:10px;}
+    .toggle-row{font-size:16px;gap:10px;margin-top:12px;}
+    .toggle-row input{width:18px;height:18px;}
+    #voiceHint{font-size:15px;}
+    .tray-label{font-size:16px;margin-bottom:10px;}
+    .tray{gap:12px;padding:14px;border-radius:14px;}
+    .item-tile{border-radius:14px;}
+    .cabinet-wrap{padding:22px;}
+    .cabinet{padding:22px;border-radius:16px;width:100%;}
+    .shelf-grid{gap:12px;}
+    .shelf-cell{border-radius:14px;}
+    /* 方位詞：放在櫃子下面，預設展開，可收合 */
+    .legend{padding:14px 18px 18px;border-radius:14px;position:relative;}
+    .legend h3{font-size:16px;margin-bottom:10px;}
+    #legendToggle{display:block;position:absolute;top:8px;right:12px;width:auto;background:transparent;color:var(--sub);font-size:14px;padding:4px 8px;}
+    .legend:not(.open) .legend-grid{display:none;}
+    .legend:not(.open) h3{margin-bottom:0;}
+    .legend-grid{gap:8px;}
+    .legend-grid .cell{font-size:15px;padding:8px 4px;border-radius:8px;}
+    .legend-grid .cell .ph{font-size:12.5px;margin-top:3px;}
+  }
 </style>
 </head>
 <body>
@@ -436,6 +486,7 @@
 
 <div class="stage">
 
+  <div class="col-left">
   <!-- 指令區 -->
   <div class="panel instr-panel">
     <div class="status-row">
@@ -485,6 +536,8 @@
     <div class="tray" id="tray"></div>
   </div>
 
+  </div>
+  <div class="col-right">
   <!-- 櫃子 -->
   <div class="panel cabinet-wrap">
     <div class="cabinet">
@@ -497,6 +550,7 @@
     <h3 data-i18n="legendTitle"></h3>
     <button type="button" id="legendToggle"></button>
     <div class="legend-grid" id="legendGrid"></div>
+  </div>
   </div>
 </div>
 
@@ -856,6 +910,7 @@ function renderLegend(){
   });
   $('legendToggle').textContent = $('legend').classList.contains('open') ? t('legendHide') : t('legendShow');
 }
+if (window.matchMedia('(min-width: 1000px)').matches) $('legend').classList.add('open');
 $('legendToggle').addEventListener('click', () => {
   $('legend').classList.toggle('open');
   renderLegend();
