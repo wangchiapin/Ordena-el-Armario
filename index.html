@@ -409,8 +409,9 @@
     .cabinet-wrap{padding:6px;}
     .cabinet{padding:8px;}
     /* 櫃子大小跟著螢幕高度縮，讓托盤也放得進同一個畫面 */
-    .shelf-grid{width:min(100%, calc(100dvh - 455px));min-width:160px;gap:6px;}
-    body.hint-on .shelf-grid{width:min(100%, calc(100dvh - 510px));}
+    /* 用 svh（固定高度）而不是 dvh：手機網址列伸縮時櫃子大小不會跟著跳，避免捲動卡住 */
+    .shelf-grid{width:min(100%, calc(100svh - 455px));min-width:160px;gap:6px;}
+    body.hint-on .shelf-grid{width:min(100%, calc(100svh - 510px));}
     .tray-label{margin:0 2px 4px;}
     .tray{grid-template-columns:repeat(5,1fr);gap:5px;padding:5px;}
     .item-tile{border-radius:9px;}
