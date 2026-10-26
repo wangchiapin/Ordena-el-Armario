@@ -27,7 +27,7 @@
 `images/圖片{id}.webp`（300×300）。程式依序找 `.webp` → `.png` → 顯示文字。
 
 ## Firebase 規則
-`firestore-rules-full.txt` 是 memorma-24dab 的完整規則（含 Memorama、本遊戲、色數消消樂）。
+Firebase 規則的正本放在私人 repo `game-kit` 的 `firebase-rules/`（memorma-24dab 專案共用一份規則）。這個 repo 不再放規則檔。
 
 ## 手機瀏覽器備註：捲動後回不到頂端（2026-10-24）
 iPhone 版 Chrome 上，頁面可以捲動時，往下捲之後有時回不到最上面（Safari 正常）。
