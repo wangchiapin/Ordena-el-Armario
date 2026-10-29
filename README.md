@@ -1,4 +1,4 @@
-# Ordena el Armario
+# Ordena el Armario（收納小達人）
 
 > 整理衣櫃的中文方位詞聽力遊戲
 
@@ -36,6 +36,9 @@
 
 ## Firebase 規則
 Firebase 規則的正本放在私人 repo `game-kit` 的 `firebase-rules/`（memorma-24dab 專案共用一份規則）。這個 repo 不再放規則檔。
+
+## 分享連結預覽（2026-10-28）
+把網址貼到 LINE、WhatsApp 時，會顯示遊戲名稱「收納小達人 · Ordena el Armario」和縮圖。縮圖是根目錄的 `og.jpg`（1200x630）；名稱與說明文字寫在 `index.html` `<head>` 的 `og:title`、`og:description`。
 
 ## 手機瀏覽器備註：捲動後回不到頂端（2026-10-24）
 iPhone 版 Chrome 上，頁面可以捲動時，往下捲之後有時回不到最上面（Safari 正常）。
